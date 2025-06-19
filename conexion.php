@@ -3,11 +3,11 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// DATOS ACTUALES DEL SISTEMA DE MONITOREO
+// Conexión real para Hostinger
 $host = "localhost";
-$user = "u240362798_sistemaagua";
-$pass = "glcp,.?2A.";
-$db   = "u240362798_sistemaagua";
+$user = "u240362798_sistemaagua"; // Este es tu usuario exacto
+$pass = "glcp.,?2A.";     // ⚠️ Cambia esto por la contraseña correcta
+$db = "u240362798_sistemaagua";   // Este es el nombre exacto de tu BD
 
 $conexion = new mysqli($host, $user, $pass, $db);
 
