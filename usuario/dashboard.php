@@ -6,43 +6,18 @@ if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'usuario') {
 }
 
 include_once '../conexion.php';
+include_once '../includes/header.php';
 
-// Obtener sensores disponibles
-$sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre");
+$sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre ASC");
 ?>
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Dashboard Usuario</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="#">Usuario</a>
-        <div class="collapse navbar-collapse">
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item"><a class="nav-link" href="#">Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Reportes</a></li>
-            </ul>
-            <span class="navbar-text text-white me-3">
-                <?php echo $_SESSION['nombre']; ?>
-            </span>
-            <a class="btn btn-outline-light" href="../logout.php">Cerrar sesión</a>
-        </div>
-    </div>
-</nav>
-
 <div class="container mt-5">
-    <h3>Bienvenido, <?php echo $_SESSION['nombre']; ?></h3>
+    <h2 class="mb-4">Bienvenido, <?= $_SESSION['nombre'] ?></h2>
 
-    <form id="formGraficas" class="row g-3 align-items-end mt-3">
+    <form id="formGraficas" class="row g-3 mb-4">
         <div class="col-md-4">
-            <label for="sensor" class="form-label">Sensor:</label>
-            <select id="sensor" name="sensor1" class="form-select" required>
+            <label>Sensor:</label>
+            <select class="form-control" name="sensor1" id="sensor1" required>
                 <option value="">Seleccione</option>
                 <?php while ($s = $sensores->fetch_assoc()): ?>
                     <option value="<?= $s['id'] ?>"><?= $s['nombre'] ?></option>
@@ -51,77 +26,58 @@ $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre");
         </div>
 
         <div class="col-md-4">
-            <label for="tipoGrafica" class="form-label">Tipo de Gráfica:</label>
-            <select id="tipoGrafica" name="tipoGrafica" class="form-select">
+            <label>Tipo de Gráfica:</label>
+            <select class="form-control" name="tipoGrafica" id="tipoGrafica">
                 <option value="historica">Histórica de caudal</option>
-                <option value="comparacion_fechas">Comparación por fechas</option>
-                <option value="comparacion_temporadas">Temporadas</option>
-                <option value="calidad">Calidad del agua</option>
             </select>
         </div>
 
         <div class="col-md-2">
-            <label for="anio" class="form-label">Año:</label>
-            <input type="number" id="anio" name="anio" class="form-control" value="<?= date('Y') ?>">
+            <label>Año:</label>
+            <input type="number" class="form-control" name="anio" value="<?= date('Y') ?>">
         </div>
 
         <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100">Generar Gráfica</button>
+            <label>Periodo:</label>
+            <select class="form-control" name="periodo">
+                <option value="dia">Día</option>
+                <option value="semana">Semana</option>
+                <option value="mes" selected>Mes</option>
+            </select>
+        </div>
+
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">Generar Gráfica</button>
         </div>
     </form>
 
-    <div class="row mt-3" id="fechasComparacion" style="display:none;">
-        <div class="col-md-3">
-            <label for="fecha_inicio" class="form-label">Fecha inicio:</label>
-            <input type="date" id="fecha_inicio" name="fecha_inicio" class="form-control">
-        </div>
-        <div class="col-md-3">
-            <label for="fecha_fin" class="form-label">Fecha fin:</label>
-            <input type="date" id="fecha_fin" name="fecha_fin" class="form-control">
-        </div>
-    </div>
-
-    <div class="mt-4">
-        <canvas id="grafico" height="100"></canvas>
+    <div>
+        <canvas id="graficaCaudal" height="100"></canvas>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const form = document.getElementById('formGraficas');
-const tipoGrafica = document.getElementById('tipoGrafica');
-const fechasComparacion = document.getElementById('fechasComparacion');
-const ctx = document.getElementById('grafico').getContext('2d');
-let chart = null;
-
-tipoGrafica.addEventListener('change', function () {
-    fechasComparacion.style.display = this.value === 'comparacion_fechas' ? 'flex' : 'none';
-});
-
-form.addEventListener('submit', function(e) {
+document.getElementById('formGraficas').addEventListener('submit', function(e) {
     e.preventDefault();
-    const formData = new FormData(form);
 
-    if (tipoGrafica.value === 'comparacion_fechas') {
-        formData.append('fecha_inicio', document.getElementById('fecha_inicio').value);
-        formData.append('fecha_fin', document.getElementById('fecha_fin').value);
-    }
+    const datos = new FormData(this);
 
-    
-    fetch('get_grafico_usuario.php', {
+    fetch('../get_grafico_usuario.php', {
         method: 'POST',
-        body: formData
+        body: datos
     })
-    .then(res => {
-        if (!res.ok) throw new Error("Error en la respuesta del servidor");
-        return res.json();
-    })
+    .then(res => res.json())
     .then(data => {
-        if (!data || !data.labels || data.labels.length === 0) {
-            alert("No se encontraron datos para los filtros seleccionados.");
+        if (!data || !data.labels.length) {
+            alert('No se encontraron datos.');
             return;
         }
-        if (chart) chart.destroy();
-        chart = new Chart(ctx, {
+
+        const ctx = document.getElementById('graficaCaudal').getContext('2d');
+        if (window.miGrafico) window.miGrafico.destroy();
+
+        window.miGrafico = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: data.labels,
@@ -132,17 +88,14 @@ form.addEventListener('submit', function(e) {
                 plugins: {
                     title: {
                         display: true,
-                        text: data.titulo || 'Gráfica'
+                        text: data.titulo
                     }
                 }
             }
         });
     })
-    .catch(err => {
-        console.error(err);
-        alert('Error al generar la gráfica');
-    });
+    .catch(err => alert('Error al generar la gráfica.'));
 });
 </script>
-</body>
-</html>
+
+<?php include_once '../includes/footer.php'; ?>
