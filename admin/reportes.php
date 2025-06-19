@@ -128,12 +128,14 @@ document.getElementById('formComparar').addEventListener('submit', function (e) 
     })
     .then(response => response.json())
     .then(data => {
+        if (!data || !data.labels || data.labels.length === 0) {
+            alert("No se encontraron datos para los filtros seleccionados.");
+            return;
+        }
         const ctx = document.getElementById('graficaCaudal').getContext('2d');
         if (window.miGrafico) window.miGrafico.destroy();
-const datasets = data.datasets.map(ds => ({
-  ...ds,
-  borderWidth: 1
-}));
+
+        const datasets = data.datasets.map(ds => ({ ...ds, borderWidth: 1 }));
 
         window.miGrafico = new Chart(ctx, {
             type: 'bar',
@@ -221,21 +223,16 @@ fetch('get_grafico.php', {
 })
 .then(response => response.json())
 .then(data => {
+        if (!data || !data.labels || data.labels.length === 0) {
+            alert("No se encontraron datos para los filtros seleccionados.");
+            return;
+        }
   const ctx = document.getElementById('miGrafico').getContext('2d');
   if (window.miGrafico) {
     window.miGrafico.destroy();
   }
 
-  const colores = tipoGrafica === 'temporada'
-    ? ['#3399FF', '#FF9933']  // Azul para lluvia, naranja para sequía
-    : ['#4e73df', '#1cc88a', '#36b9cc'];
-
-  const datasets = data.datasets.map((ds, index) => ({
-    ...ds,
-    backgroundColor: colores[index % colores.length],
-    borderColor: colores[index % colores.length],
-    borderWidth: 1
-  }));
+  const datasets = data.datasets.map(ds => ({ ...ds, borderWidth: 1 }));
 
   window.miGrafico = new Chart(ctx, {
     type: 'bar',
@@ -268,6 +265,10 @@ fetch('get_grafico.php', {
     })
     .then(res => res.json())
     .then(data => {
+        if (!data || !data.labels || data.labels.length === 0) {
+            alert("No se encontraron datos para los filtros seleccionados.");
+            return;
+        }
         const ctx = document.getElementById('graficaCaudal').getContext('2d');
         if (window.miGrafica) window.miGrafica.destroy();
         window.miGrafica = new Chart(ctx, {
