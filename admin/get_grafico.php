@@ -2,7 +2,20 @@
 include_once '../conexion.php';
 header('Content-Type: application/json');
 
-file_put_contents('debug_post.txt', print_r($_POST, true));
+// Guardar todo lo recibido y el tipo de gráfica
+file_put_contents('debug_post.txt', "POST:\n" . print_r($_POST, true));
+file_put_contents('debug_log.txt', "tipoGrafica: " . ($_POST['tipoGrafica'] ?? 'NO DEFINIDO') . "\n", FILE_APPEND);
+
+$response = [
+    'labels' => [],
+    'datasets' => [],
+    'titulo' => ''
+];
+
+// Aquí puedes agregar un log para saber si entra a cada condición
+function log_debug($mensaje) {
+    file_put_contents('debug_log.txt', $mensaje . "\n", FILE_APPEND);
+}
 
 $sensor1 = $_POST['sensor1'] ?? null;
 $sensor2 = $_POST['sensor2'] ?? null;
@@ -12,41 +25,35 @@ $periodo = $_POST['periodo'] ?? 'mes';
 $fecha_inicio = $_POST['fecha_inicio'] ?? null;
 $fecha_fin = $_POST['fecha_fin'] ?? null;
 
-$response = [
-    'labels' => [],
-    'datasets' => [],
-    'titulo' => ''
-];
-
 function formatoFecha($periodo) {
-    return match ($periodo) {
-        'dia' => '%Y-%m-%d',
-        'semana' => '%Y-%u',
-        'mes' => '%Y-%m',
-        'anual' => '%Y',
-        default => '%Y-%m-%d'
-    };
+    return match ($periodo) {
+        'dia' => '%Y-%m-%d',
+        'semana' => '%Y-%u',
+        'mes' => '%Y-%m',
+        'anual' => '%Y',
+        default => '%Y-%m-%d'
+    };
 }
 
 function obtenerDatosCaudal($conexion, $sensor_id, $anio, $periodo) {
-    $formato = formatoFecha($periodo);
-    $query = $conexion->prepare("
-        SELECT DATE_FORMAT(fecha, ?) AS periodo, AVG(caudal_lps) AS promedio
-        FROM reportes
-        WHERE sensor_id = ? AND tipo_reporte = 'caudal' AND YEAR(fecha) = ?
-        GROUP BY periodo ORDER BY periodo ASC
-    ");
-    $query->bind_param('sii', $formato, $sensor_id, $anio);
-    $query->execute();
-    $result = $query->get_result();
+    $formato = formatoFecha($periodo);
+    $query = $conexion->prepare("
+        SELECT DATE_FORMAT(fecha, ?) AS periodo, AVG(caudal_lps) AS promedio
+        FROM reportes
+        WHERE sensor_id = ? AND tipo_reporte = 'caudal' AND YEAR(fecha) = ?
+        GROUP BY periodo ORDER BY periodo ASC
+    ");
+    $query->bind_param('sii', $formato, $sensor_id, $anio);
+    $query->execute();
+    $result = $query->get_result();
 
-    $labels = [];
-    $data = [];
-    while ($row = $result->fetch_assoc()) {
-        $labels[] = $row['periodo'];
-        $data[] = round($row['promedio'], 2);
-    }
-    return [$labels, $data];
+    $labels = [];
+    $data = [];
+    while ($row = $result->fetch_assoc()) {
+        $labels[] = $row['periodo'];
+        $data[] = round($row['promedio'], 2);
+    }
+    return [$labels, $data];
 }
 
 if ($tipoGrafica === 'historica' && $sensor1) {
