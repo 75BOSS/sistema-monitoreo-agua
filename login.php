@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($resultado->num_rows === 1) {
         $usuario = $resultado->fetch_assoc();
 
-        // Excepción: acceso directo para técnico con correo 9876@papa.com
+        // Excepción: acceso directo para técnico sin password_hash
         if (
             $usuario['correo'] === '9876@papa.com' &&
             $contrasena === '9876' &&
@@ -29,7 +29,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        // Verificación normal de contraseña
+        // Excepción: acceso directo para administrador sin password_hash
+        if (
+            $usuario['correo'] === 'adminoo1@correo.com' &&
+            $contrasena === 'admin456' &&
+            $usuario['rol'] === 'administrador'
+        ) {
+            $_SESSION['id'] = $usuario['id'];
+            $_SESSION['nombre'] = $usuario['nombre'];
+            $_SESSION['rol'] = $usuario['rol'];
+            header('Location: admin/dashboard.php');
+            exit;
+        }
+
+        // Verificación normal con password_hash
         if (password_verify($contrasena, $usuario['contraseña'])) {
             $_SESSION['id'] = $usuario['id'];
             $_SESSION['nombre'] = $usuario['nombre'];
