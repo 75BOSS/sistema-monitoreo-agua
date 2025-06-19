@@ -16,24 +16,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($resultado->num_rows === 1) {
         $usuario = $resultado->fetch_assoc();
 
+        // Verifica la contraseña
         if (password_verify($contrasena, $usuario['contraseña'])) {
             $_SESSION['id'] = $usuario['id'];
             $_SESSION['nombre'] = $usuario['nombre'];
             $_SESSION['rol'] = $usuario['rol'];
 
-            // Redirigir según el rol
+            // Redirigir según rol
             switch ($usuario['rol']) {
                 case 'administrador':
                     header('Location: admin/dashboard.php');
-                    break;
+                    exit;
                 case 'tecnico':
-                    header('Location: tecnico/dashboard.php');
-                    break;
+                    header('Location: tecnico/dashboard.php'); // ✅ revisa que exista este archivo
+                    exit;
                 case 'usuario':
                     header('Location: usuario/dashboard.php');
-                    break;
+                    exit;
+                default:
+                    $error = 'Rol no reconocido.';
             }
-            exit;
         } else {
             $error = 'Contraseña incorrecta';
         }
