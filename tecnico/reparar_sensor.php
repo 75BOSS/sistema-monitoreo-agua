@@ -1,44 +1,29 @@
 <?php
 session_start();
-if (!isset($_SESSION['id']) || $_SESSION['rol'] !== 'tecnico') {
+include_once '../conexion.php';
+
+// Asegurar que el usuario es técnico
+if (!isset($_SESSION['rol']) || $_SESSION['rol'] !== 'tecnico') {
     header('Location: ../login.php');
     exit;
 }
 
-include_once '../conexion.php';
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['sensor_id'])) {
     $sensor_id = intval($_POST['sensor_id']);
-    $tecnico_id = $_SESSION['id'];
-    $fecha_inicio = date('Y-m-d H:i:s');
 
-    // Iniciar reparación (registrar en tabla y cambiar estado del sensor)
-    $conexion->begin_transaction();
+    // Actualizar estado del sensor a 'en_reparacion'
+    $query = $conexion->prepare("UPDATE sensores SET estado = 'en_reparacion' WHERE id = ?");
+    $query->bind_param('i', $sensor_id);
 
-    try {
-        // Insertar en tabla reparaciones
-        $stmt1 = $conexion->prepare("
-            INSERT INTO reparaciones (sensor_id, tecnico_id, fecha_inicio, estado)
-            VALUES (?, ?, ?, 'en_reparacion')
-        ");
-        $stmt1->bind_param("iis", $sensor_id, $tecnico_id, $fecha_inicio);
-        $stmt1->execute();
-
-        // Actualizar estado del sensor
-        $stmt2 = $conexion->prepare("
-            UPDATE sensores SET estado = 'en_reparacion' WHERE id = ?
-        ");
-        $stmt2->bind_param("i", $sensor_id);
-        $stmt2->execute();
-
-        $conexion->commit();
-        header('Location: dashboard.php?msg=reparacion_iniciada');
+    if ($query->execute()) {
+        // Opcional: podrías agregar un registro en la tabla reparaciones si deseas
+        // Redirigir de nuevo al dashboard
+        header('Location: dashboard.php?estado=averiado');
         exit;
-    } catch (Exception $e) {
-        $conexion->rollback();
-        echo "Error al iniciar reparación: " . $e->getMessage();
+    } else {
+        echo "Error al actualizar el estado.";
     }
 } else {
-    header('Location: dashboard.php');
-    exit;
+    echo "Solicitud inválida.";
 }
+?>
