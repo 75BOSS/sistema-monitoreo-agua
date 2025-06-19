@@ -21,7 +21,7 @@ if (!$sensor || !$tipo) {
 }
 
 function obtenerDatos($conexion, $sensor, $condicion, $groupBy) {
-    $query = "SELECT $groupBy AS etiqueta, AVG(valor) AS promedio
+    $query = "SELECT $groupBy AS etiqueta, AVG(caudal_lps) AS promedio
               FROM reportes
               WHERE sensor_id = ? AND tipo_reporte = 'caudal' AND $condicion
               GROUP BY etiqueta
