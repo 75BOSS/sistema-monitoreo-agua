@@ -6,7 +6,7 @@ if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'usuario') {
 }
 
 include_once '../conexion.php';
-include_once 'includes/header.php';
+include_once 'includes/header_usuario.php';
 
 $usuarioId = $_SESSION['id'] ?? 0;
 
