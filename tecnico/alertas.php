@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'tecnico') {
     header('Location: ../login.php');
     exit;
@@ -8,33 +10,37 @@ if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'tecnico') {
 include_once '../conexion.php';
 include_once 'includes/header_tecnico.php';
 
-// Obtener reparaciones activas
-$query = $conexion->query("
-    SELECT r.id, s.nombre AS sensor, s.comunidad, s.ciudad, s.provincia, r.fecha_inicio 
+$tecnico_id = $_SESSION['id'];
+
+$query = $conexion->prepare("
+    SELECT r.id, s.nombre AS sensor, s.comunidad, s.ciudad, s.provincia, r.fecha_inicio
     FROM reparaciones r
     JOIN sensores s ON r.sensor_id = s.id
-    WHERE r.estado = 'en_reparacion' AND r.tecnico_id = " . intval($_SESSION['id']) . "
+    WHERE r.tecnico_id = ? AND r.estado = 'en_reparacion'
 ");
+$query->bind_param('i', $tecnico_id);
+$query->execute();
+$resultado = $query->get_result();
 ?>
 
 <div class="container mt-5">
     <h2 class="mb-4">Alertas y Reparaciones Activas</h2>
 
-    <?php if ($query->num_rows > 0): ?>
-        <table class="table table-bordered">
-            <thead class="table-dark">
+    <table class="table table-bordered">
+        <thead class="table-dark">
+            <tr>
+                <th>Sensor</th>
+                <th>Ubicación</th>
+                <th>Fecha de Inicio</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php if ($resultado->num_rows > 0): ?>
+            <?php while ($row = $resultado->fetch_assoc()): ?>
                 <tr>
-                    <th>Sensor</th>
-                    <th>Ubicación</th>
-                    <th>Fecha de Inicio</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody>
-            <?php while ($row = $query->fetch_assoc()): ?>
-                <tr>
-                    <td><?= $row['sensor'] ?></td>
-                    <td><?= $row['comunidad'] ?>, <?= $row['ciudad'] ?>, <?= $row['provincia'] ?></td>
+                    <td><?= htmlspecialchars($row['sensor']) ?></td>
+                    <td><?= htmlspecialchars($row['comunidad'] . ', ' . $row['ciudad'] . ', ' . $row['provincia']) ?></td>
                     <td><?= $row['fecha_inicio'] ?></td>
                     <td>
                         <form method="POST" action="finalizar_reparacion.php">
@@ -44,11 +50,11 @@ $query = $conexion->query("
                     </td>
                 </tr>
             <?php endwhile; ?>
-            </tbody>
-        </table>
-    <?php else: ?>
-        <div class="alert alert-info">No tienes reparaciones activas.</div>
-    <?php endif; ?>
+        <?php else: ?>
+            <tr><td colspan="4" class="text-center">No hay reparaciones activas actualmente.</td></tr>
+        <?php endif; ?>
+        </tbody>
+    </table>
 </div>
 
 <?php include_once '../includes/footer.php'; ?>
