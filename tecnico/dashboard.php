@@ -1,6 +1,10 @@
 <?php
-// dashboard.php para TECNICO
 session_start();
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Verificación de sesión
 if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'tecnico') {
     header('Location: ../login.php');
     exit;
@@ -9,18 +13,23 @@ if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'tecnico') {
 include_once '../conexion.php';
 include_once '../includes/header_tecnico.php';
 
+// Inicialización
 $estado_filtro = $_GET['estado'] ?? '';
+$resultado = null;
 
-$where = '';
-if ($estado_filtro) {
-    $where = "WHERE estado = ?";
-    $query = $conexion->prepare("SELECT * FROM sensores $where");
-    $query->bind_param('s', $estado_filtro);
-} else {
-    $query = $conexion->prepare("SELECT * FROM sensores");
+try {
+    if ($estado_filtro && in_array($estado_filtro, ['funcional', 'averiado', 'en_reparacion'])) {
+        $query = $conexion->prepare("SELECT * FROM sensores WHERE estado = ?");
+        $query->bind_param('s', $estado_filtro);
+    } else {
+        $query = $conexion->prepare("SELECT * FROM sensores");
+    }
+
+    $query->execute();
+    $resultado = $query->get_result();
+} catch (Exception $e) {
+    echo "<div class='alert alert-danger'>Error al obtener sensores: " . htmlspecialchars($e->getMessage()) . "</div>";
 }
-$query->execute();
-$resultado = $query->get_result();
 ?>
 
 <div class="container mt-5">
@@ -36,6 +45,7 @@ $resultado = $query->get_result();
         </select>
     </form>
 
+    <?php if ($resultado): ?>
     <table class="table table-bordered">
         <thead class="table-dark">
             <tr>
@@ -49,10 +59,10 @@ $resultado = $query->get_result();
         <tbody>
         <?php while ($sensor = $resultado->fetch_assoc()): ?>
             <tr>
-                <td><?= $sensor['id'] ?></td>
-                <td><?= $sensor['nombre'] ?></td>
-                <td><?= $sensor['comunidad'] ?>, <?= $sensor['ciudad'] ?>, <?= $sensor['provincia'] ?></td>
-                <td><?= ucfirst($sensor['estado']) ?></td>
+                <td><?= htmlspecialchars($sensor['id']) ?></td>
+                <td><?= htmlspecialchars($sensor['nombre']) ?></td>
+                <td><?= htmlspecialchars($sensor['comunidad']) ?>, <?= htmlspecialchars($sensor['ciudad']) ?>, <?= htmlspecialchars($sensor['provincia']) ?></td>
+                <td><?= ucfirst(htmlspecialchars($sensor['estado'])) ?></td>
                 <td>
                     <?php if ($sensor['estado'] === 'averiado'): ?>
                         <form method="POST" action="reparar_sensor.php" class="d-inline">
@@ -67,6 +77,9 @@ $resultado = $query->get_result();
         <?php endwhile; ?>
         </tbody>
     </table>
+    <?php else: ?>
+        <div class="alert alert-warning">No se pudieron cargar los sensores.</div>
+    <?php endif; ?>
 </div>
 
 <?php include_once '../includes/footer.php'; ?>
