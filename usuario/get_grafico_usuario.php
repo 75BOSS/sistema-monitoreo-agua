@@ -83,7 +83,7 @@ switch ($tipo) {
         ];
         $response['labels'] = array_keys($temporadas);
         foreach ($temporadas as $nombre => $rango) {
-            $query = "SELECT AVG(valor) AS promedio
+            $query = "SELECT AVG(caudal_lps) AS promedio
                       FROM reportes
                       WHERE sensor_id = ? AND tipo_reporte = 'caudal'
                       AND fecha BETWEEN ? AND ?";
