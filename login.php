@@ -4,7 +4,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 session_start();
-require_once 'includes/conexion.php';
+require_once 'includes/db.php'; // Cambio aquí
 
 $mensaje = "";
 
@@ -12,7 +12,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $correo = trim($_POST['correo']);
     $clave = hash('sha256', $_POST['clave']);
 
-    $stmt = $conn->prepare("SELECT id, nombre, rol FROM usuarios WHERE correo = ? AND contraseña = ?");
+    $stmt = $conexion->prepare("SELECT id, nombre, rol FROM usuarios WHERE correo = ? AND contraseña = ?");
     $stmt->bind_param("ss", $correo, $clave);
     $stmt->execute();
     $stmt->store_result();
@@ -44,6 +44,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -55,7 +56,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <body>
     <div id="tservicios" class="contenedor">
         <div class="contenedor__todo">
-            <div class="caja__trasera">
+ <div class="caja__trasera">
                 <div class="caja__trasera-login">
                     <h3>¿Ya tienes una cuenta?</h3>
                     <p>Inicia sesión para entrar en el sistema</p>
