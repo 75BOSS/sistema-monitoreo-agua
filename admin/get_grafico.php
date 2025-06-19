@@ -2,6 +2,8 @@
 include_once '../conexion.php';
 header('Content-Type: application/json');
 
+file_put_contents('debug_post.txt', print_r($_POST, true));
+
 $sensor1 = $_POST['sensor1'] ?? null;
 $sensor2 = $_POST['sensor2'] ?? null;
 $tipoGrafica = $_POST['tipoGrafica'] ?? 'historica';
