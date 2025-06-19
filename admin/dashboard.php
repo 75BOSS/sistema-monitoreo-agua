@@ -6,7 +6,7 @@ if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'administrador') {
     exit;
 }
 
-include_once '../includes/db.php';
+include_once '../includes/conexion.php';
 include_once '../includes/header.php';
 
 // Conteos rápidos
