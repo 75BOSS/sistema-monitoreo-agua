@@ -19,7 +19,7 @@ $alertas = mysqli_query($conn, "SELECT COUNT(*) as total FROM reportes WHERE (ca
 <head>
     <meta charset="UTF-8">
     <title>Panel Técnico</title>
-    <link rel="stylesheet" href="estilos.css">
+    <link rel="stylesheet" href="css/estilo.css">
 </head>
 <body>
     <h1>Bienvenido, Técnico <?= $_SESSION['usuario'] ?></h1>
