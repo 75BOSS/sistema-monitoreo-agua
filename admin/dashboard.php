@@ -9,7 +9,7 @@ if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'administrador') {
     exit;
 }
 
-include_once '../includes/conexion.php';
+include_once '..conexion.php';
 include_once '../includes/header.php';
 
 
