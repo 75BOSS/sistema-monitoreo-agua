@@ -7,7 +7,8 @@ if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'usuario') {
 }
 
 include_once '../conexion.php';
-include_once '../includes/header.php';
+include_once 'includes/header_usuario.php';
+
 
 // Obtener sensores para el formulario
 $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre ASC");
