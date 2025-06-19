@@ -1,6 +1,7 @@
+
 <?php
 session_start();
-if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'administrador') {
+if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'usuario') {
     header('Location: ../login.php');
     exit;
 }
@@ -59,7 +60,7 @@ $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre AS
                 <option value="dia">Diario</option>
                 <option value="semana">Semanal</option>
                 <option value="mes">Mensual</option>
-<option value="anual">Anual</option>
+                <option value="anual">Anual</option>
             </select>
         </div>
 
@@ -87,7 +88,6 @@ document.getElementById('tipoGrafica').addEventListener('change', function () {
     }
 });
 
-
 document.getElementById('formComparar').addEventListener('submit', function (e) {
     e.preventDefault();
 
@@ -96,31 +96,14 @@ document.getElementById('formComparar').addEventListener('submit', function (e) 
     const sensor2 = document.getElementById('sensor2')?.value || '';
     const periodo = document.querySelector('[name="periodo"]').value;
     const anio = document.querySelector('[name="anio"]').value;
-    const fecha_inicio = document.getElementById('fecha_inicio')?.value || '';
-    const fecha_fin = document.getElementById('fecha_fin')?.value || '';
-
-    if (!sensor1) {
-        alert('Por favor selecciona al menos un sensor.');
-        return;
-    }
-
-    if (tipoGrafica === 'comparacion_sensores' && !sensor2) {
-        alert('Por favor selecciona el segundo sensor para comparar.');
-        return;
-    }
-
     const datos = {
         sensor1,
-        sensor2,
         tipoGrafica,
         periodo,
         anio
     };
 
-    if (tipoGrafica === 'comparacion_fechas') {
-        datos.fecha_inicio = fecha_inicio;
-        datos.fecha_fin = fecha_fin;
-    }
+    if (tipoGrafica === 'comparacion_sensores') datos.sensor2 = sensor2;
 
     fetch('get_grafico_usuario.php', {
         method: 'POST',
@@ -134,159 +117,24 @@ document.getElementById('formComparar').addEventListener('submit', function (e) 
         }
         const ctx = document.getElementById('graficaCaudal').getContext('2d');
         if (window.miGrafico) window.miGrafico.destroy();
-
-        const datasets = data.datasets.map(ds => ({ ...ds, borderWidth: 1 }));
-
         window.miGrafico = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: data.labels,
-                datasets: datasets
+                datasets: data.datasets.map(ds => ({ ...ds, borderWidth: 1 }))
             },
             options: {
                 responsive: true,
                 plugins: {
-                    title: {
-                        display: true,
-                        text: data.titulo
-                    },
-                    legend: {
-                        display: true
-                    }
+                    title: { display: true, text: data.titulo },
+                    legend: { display: true }
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
+                scales: { y: { beginAtZero: true } }
             }
         });
-    });
-});
-</script>
-<script>
-document.getElementById('tipoGrafica').addEventListener('change', function () {
-    const sensor2 = document.getElementById('sensor2Container');
-    const boton = document.getElementById('botonComparar');
-    if (this.value === 'comparacion_sensores') {
-        sensor2.style.display = 'block';
-        boton.textContent = 'Comparar sensores';
-    } else {
-        sensor2.style.display = 'none';
-        boton.textContent = 'Ver gráfica';
-    }
-});
-
-document.getElementById('formComparar').addEventListener('submit', function (e) {
-    e.preventDefault();
-    const tipoGrafica = document.getElementById('tipoGrafica').value;
-    const sensor1 = document.getElementById('sensor1').value;
-    const sensor2 = document.getElementById('sensor2').value;
-
-    if (!sensor1) {
-        alert('Por favor selecciona al menos un sensor.');
-        return;
-    }
-
-    if (tipoGrafica === 'comparacion_sensores' && !sensor2) {
-        alert('Por favor selecciona el segundo sensor para comparar.');
-        return;
-    }
-
-    const formData = new FormData(this);
-
-    
-const tipoGrafica = document.getElementById('tipoGrafica').value;
-const sensor1 = document.getElementById('sensor1')?.value || '';
-const sensor2 = document.getElementById('sensor2')?.value || '';
-const periodo = document.getElementById('periodo')?.value || '';
-const anio = document.getElementById('anio')?.value || '';
-const fecha_inicio = document.getElementById('fecha_inicio')?.value || '';
-const fecha_fin = document.getElementById('fecha_fin')?.value || '';
-
-const datos = {
-  sensor1,
-  sensor2,
-  tipoGrafica,
-  periodo,
-  anio
-};
-
-if (tipoGrafica === 'por_fechas') {
-  datos.fecha_inicio = fecha_inicio;
-  datos.fecha_fin = fecha_fin;
-}
-
-fetch('get_grafico_usuario.php', {
-  method: 'POST',
-  body: new URLSearchParams(datos)
-})
-.then(response => response.json())
-.then(data => {
-        if (!data || !data.labels || data.labels.length === 0) {
-            alert("No se encontraron datos para los filtros seleccionados.");
-            return;
-        }
-  const ctx = document.getElementById('miGrafico').getContext('2d');
-  if (window.miGrafico) {
-    window.miGrafico.destroy();
-  }
-
-  const datasets = data.datasets.map(ds => ({ ...ds, borderWidth: 1 }));
-
-  window.miGrafico = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: data.labels,
-      datasets: datasets
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        title: {
-          display: true,
-          text: data.titulo
-        },
-        legend: {
-          display: true
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true
-        }
-      }
-    }
-  });
-});
-, {
-        method: 'POST',
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (!data || !data.labels || data.labels.length === 0) {
-            alert("No se encontraron datos para los filtros seleccionados.");
-            return;
-        }
-        const ctx = document.getElementById('graficaCaudal').getContext('2d');
-        if (window.miGrafica) window.miGrafica.destroy();
-        window.miGrafica = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.labels,
-                datasets: data.datasets
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: data.titulo
-                    }
-                }
-            }
-        });
+    }).catch(error => {
+        alert('Error al generar la gráfica: ' + error);
+        console.error('Error gráfico:', error);
     });
 });
 </script>
