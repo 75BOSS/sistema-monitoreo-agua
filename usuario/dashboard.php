@@ -22,14 +22,11 @@ $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre");
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="#">Admin</a>
+        <a class="navbar-brand" href="#">Usuario</a>
         <div class="collapse navbar-collapse">
             <ul class="navbar-nav me-auto">
                 <li class="nav-item"><a class="nav-link" href="#">Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Usuarios</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Sensores</a></li>
                 <li class="nav-item"><a class="nav-link" href="#">Reportes</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Alertas</a></li>
             </ul>
             <span class="navbar-text text-white me-3">
                 <?php echo $_SESSION['nombre']; ?>
@@ -73,6 +70,17 @@ $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre");
         </div>
     </form>
 
+    <div class="row mt-3" id="fechasComparacion" style="display:none;">
+        <div class="col-md-3">
+            <label for="fecha_inicio" class="form-label">Fecha inicio:</label>
+            <input type="date" id="fecha_inicio" name="fecha_inicio" class="form-control">
+        </div>
+        <div class="col-md-3">
+            <label for="fecha_fin" class="form-label">Fecha fin:</label>
+            <input type="date" id="fecha_fin" name="fecha_fin" class="form-control">
+        </div>
+    </div>
+
     <div class="mt-4">
         <canvas id="grafico" height="100"></canvas>
     </div>
@@ -80,19 +88,37 @@ $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre");
 
 <script>
 const form = document.getElementById('formGraficas');
+const tipoGrafica = document.getElementById('tipoGrafica');
+const fechasComparacion = document.getElementById('fechasComparacion');
 const ctx = document.getElementById('grafico').getContext('2d');
-let chart;
+let chart = null;
+
+tipoGrafica.addEventListener('change', function () {
+    fechasComparacion.style.display = this.value === 'comparacion_fechas' ? 'flex' : 'none';
+});
 
 form.addEventListener('submit', function(e) {
     e.preventDefault();
     const formData = new FormData(form);
 
-    fetch('../get_graficos.php', {
+    if (tipoGrafica.value === 'comparacion_fechas') {
+        formData.append('fecha_inicio', document.getElementById('fecha_inicio').value);
+        formData.append('fecha_fin', document.getElementById('fecha_fin').value);
+    }
+
+    fetch('../get_grafico.php', {
         method: 'POST',
         body: formData
     })
-    .then(res => res.json())
+    .then(res => {
+        if (!res.ok) throw new Error("Error en la respuesta del servidor");
+        return res.json();
+    })
     .then(data => {
+        if (!data || !data.labels || data.labels.length === 0) {
+            alert("No se encontraron datos para los filtros seleccionados.");
+            return;
+        }
         if (chart) chart.destroy();
         chart = new Chart(ctx, {
             type: 'line',
