@@ -130,17 +130,10 @@ document.getElementById('formComparar').addEventListener('submit', function (e) 
     .then(data => {
         const ctx = document.getElementById('graficaCaudal').getContext('2d');
         if (window.miGrafico) window.miGrafico.destroy();
-
-        const colores = tipoGrafica === 'comparacion_temporadas'
-            ? ['#3399FF', '#FF9933']
-            : ['#4e73df', '#1cc88a', '#36b9cc'];
-
-        const datasets = data.datasets.map((ds, i) => ({
-            ...ds,
-            backgroundColor: colores[i % colores.length],
-            borderColor: colores[i % colores.length],
-            borderWidth: 1
-        }));
+const datasets = data.datasets.map(ds => ({
+  ...ds,
+  borderWidth: 1
+}));
 
         window.miGrafico = new Chart(ctx, {
             type: 'bar',

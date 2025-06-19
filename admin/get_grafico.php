@@ -96,10 +96,16 @@ if ($tipoGrafica === 'comparacion_fechas' && $sensor1 && $fecha_inicio && $fecha
     $stmt->execute([$formato, $sensor1, $fecha_inicio, $fecha_fin]);
     $datos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $response['labels'] = array_column($datos, 'periodo');
+$response['labels'] = array_column($datos, 'periodo');
+
+foreach ($datos as $dato) {
+    $mes = (int)date('m', strtotime($dato['periodo']));
+    $color = in_array($mes, [12,1,2,3,4,5]) ? '#3399FF' : '#FF3333'; // azul o rojo
+
     $response['datasets'][] = [
-        'label' => 'Caudal Promedio',
-        'data' => array_column($datos, 'caudal')
+        'label' => '', // puede ser '' o 'Lluvia/Sec.' si no quieres duplicado
+        'data' => [$dato['caudal']],
+        'backgroundColor' => $color
     ];
     $response['titulo'] = 'Caudal entre fechas seleccionadas';
 }
