@@ -58,9 +58,7 @@ if ($tipoGrafica === 'historica' && $sensor1) {
         'fill' => false
     ];
     $response['titulo'] = 'Histórico de caudal';
-}
-
-elseif ($tipoGrafica === 'comparacion_fechas' && $sensor1 && $fecha_inicio && $fecha_fin) {
+} elseif ($tipoGrafica === 'comparacion_fechas' && $sensor1 && $fecha_inicio && $fecha_fin) {
     $query = $conexion->prepare("
         SELECT fecha, AVG(caudal_lps) AS promedio
         FROM reportes
@@ -86,9 +84,7 @@ elseif ($tipoGrafica === 'comparacion_fechas' && $sensor1 && $fecha_inicio && $f
         'fill' => false
     ];
     $response['titulo'] = 'Comparación por fechas';
-}
-
-elseif ($tipoGrafica === 'comparacion_temporadas' && $sensor1) {
+} elseif ($tipoGrafica === 'comparacion_temporadas' && $sensor1) {
     $query = $conexion->prepare("
         SELECT MONTH(fecha) AS mes, AVG(caudal_lps) AS promedio
         FROM reportes
@@ -130,9 +126,7 @@ elseif ($tipoGrafica === 'comparacion_temporadas' && $sensor1) {
         'fill' => false
     ];
     $response['titulo'] = 'Comparación entre temporadas';
-}
-
-elseif ($tipoGrafica === 'comparacion_sensores' && $sensor1 && $sensor2) {
+} elseif ($tipoGrafica === 'comparacion_sensores' && $sensor1 && $sensor2) {
     [$labels1, $data1] = obtenerDatosCaudal($conexion, $sensor1, $anio, $periodo);
     [$labels2, $data2] = obtenerDatosCaudal($conexion, $sensor2, $anio, $periodo);
 
@@ -152,9 +146,7 @@ elseif ($tipoGrafica === 'comparacion_sensores' && $sensor1 && $sensor2) {
         'fill' => false
     ];
     $response['titulo'] = 'Comparación entre sensores';
-}
-
-elseif ($tipoGrafica === 'calidad' && $sensor1) {
+} elseif ($tipoGrafica === 'calidad' && $sensor1) {
     $query = $conexion->prepare("
         SELECT fecha,
             SUM(turbidez) AS turbidez,
@@ -189,6 +181,7 @@ elseif ($tipoGrafica === 'calidad' && $sensor1) {
         ['label' => 'Color', 'data' => $color, 'backgroundColor' => 'rgba(54, 162, 235, 0.5)'],
         ['label' => 'Residuos', 'data' => $residuos, 'backgroundColor' => 'rgba(153, 102, 255, 0.5)']
     ];
-
+    $response['titulo'] = 'Calidad del agua';
 }
+
 echo json_encode($response);
