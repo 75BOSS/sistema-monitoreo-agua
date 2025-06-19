@@ -1,6 +1,6 @@
 <?php
 session_start();
-include_once '../conexion.php';
+include_once 'conexion.php';
 
 $error = '';
 
@@ -15,12 +15,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($resultado->num_rows === 1) {
         $usuario = $resultado->fetch_assoc();
-        if (password_verify($contrasena, $usuario['contraseña'])) {
+
+        // COMPARACIÓN DIRECTA TEMPORAL (ya que no usas password_hash)
+        if ($contrasena === $usuario['contraseña']) {
             $_SESSION['id'] = $usuario['id'];
             $_SESSION['nombre'] = $usuario['nombre'];
             $_SESSION['rol'] = $usuario['rol'];
 
-            // Redirigir según rol
+            // Redirigir según el rol
             switch ($usuario['rol']) {
                 case 'administrador': header('Location: admin/dashboard.php'); break;
                 case 'tecnico': header('Location: tecnico/dashboard.php'); break;
