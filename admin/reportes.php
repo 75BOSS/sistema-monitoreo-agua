@@ -8,88 +8,104 @@ if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'administrador') {
 include_once '../conexion.php';
 include_once '../includes/header.php';
 
-// Obtener sensores para los select
-$sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre")->fetch_all(MYSQLI_ASSOC);
+// Obtener sensores para el formulario
+$sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre ASC");
 ?>
 
 <div class="container mt-5">
-    <h2 class="mb-4">Reportes del Sistema</h2>
+    <h2 class="mb-4">Visualización de Reportes</h2>
 
-    <form method="GET" id="compararForm" class="row g-3">
-        <div class="col-md-3">
+    <form id="formComparar" class="row g-3 mb-4">
+        <div class="col-md-4">
             <label>Sensor 1:</label>
-            <select class="form-control" name="sensor1">
+            <select class="form-control" id="sensor1" name="sensor1" required>
                 <option value="">Seleccione</option>
-                <?php foreach ($sensores as $s): ?>
+                <?php while ($s = $sensores->fetch_assoc()): ?>
                     <option value="<?= $s['id'] ?>"><?= $s['nombre'] ?></option>
-                <?php endforeach; ?>
+                <?php endwhile; ?>
+            </select>
+        </div>
+        <div class="col-md-4" id="sensor2Container" style="display: none;">
+            <label>Sensor 2 (para comparar):</label>
+            <select class="form-control" id="sensor2" name="sensor2">
+                <option value="">Seleccione</option>
+                <?php
+                $sensores->data_seek(0); // Reiniciar el puntero
+                while ($s = $sensores->fetch_assoc()): ?>
+                    <option value="<?= $s['id'] ?>"><?= $s['nombre'] ?></option>
+                <?php endwhile; ?>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label>Tipo de Gráfica:</label>
+            <select class="form-control" id="tipoGrafica" name="tipoGrafica" required>
+                <option value="historica">Histórica (por sensor)</option>
+                <option value="comparacion_fechas">Comparación por fechas</option>
+                <option value="comparacion_temporadas">Temporada lluvia/sequía</option>
+                <option value="comparacion_sensores">Comparación entre sensores</option>
             </select>
         </div>
         <div class="col-md-3">
-            <label>Sensor 2:</label>
-            <select class="form-control" name="sensor2">
-                <option value="">Seleccione</option>
-                <?php foreach ($sensores as $s): ?>
-                    <option value="<?= $s['id'] ?>"><?= $s['nombre'] ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="col-md-2">
             <label>Año:</label>
-            <input class="form-control" type="number" name="year" value="<?= date('Y') ?>">
+            <input type="number" class="form-control" name="anio" value="<?= date('Y') ?>" required>
         </div>
-        <div class="col-md-2">
-            <label>Ver por:</label>
-            <select name="modo" class="form-control">
-                <option value="mensual">Mensual</option>
-                <option value="semanal">Semanal</option>
-                <option value="diario">Diario</option>
+        <div class="col-md-3">
+            <label>Periodo:</label>
+            <select class="form-control" name="periodo">
+                <option value="dia">Diario</option>
+                <option value="semana">Semanal</option>
+                <option value="mes">Mensual</option>
             </select>
         </div>
-        <div class="col-md-2 d-flex align-items-end">
-            <button class="btn btn-primary w-100">Comparar</button>
+        <div class="col-md-6 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100" id="botonComparar">Ver gráfica</button>
         </div>
     </form>
 
-    <canvas id="graficoCaudal" height="100" class="mt-5"></canvas>
+    <div>
+        <canvas id="graficaCaudal" height="120"></canvas>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-document.getElementById('compararForm').addEventListener('submit', function(e) {
+document.getElementById('tipoGrafica').addEventListener('change', function () {
+    const sensor2 = document.getElementById('sensor2Container');
+    const boton = document.getElementById('botonComparar');
+    if (this.value === 'comparacion_sensores') {
+        sensor2.style.display = 'block';
+        boton.textContent = 'Comparar sensores';
+    } else {
+        sensor2.style.display = 'none';
+        boton.textContent = 'Ver gráfica';
+    }
+});
+
+document.getElementById('formComparar').addEventListener('submit', function (e) {
     e.preventDefault();
-
     const formData = new FormData(this);
-    const params = new URLSearchParams(formData);
 
-    fetch('get_grafico.php?' + params.toString())
+    fetch('get_grafico.php', {
+        method: 'POST',
+        body: formData
+    })
         .then(res => res.json())
         .then(data => {
-            const ctx = document.getElementById('graficoCaudal').getContext('2d');
-            if (window.chartInstance) window.chartInstance.destroy();
-            window.chartInstance = new Chart(ctx, {
+            const ctx = document.getElementById('graficaCaudal').getContext('2d');
+            if (window.miGrafica) window.miGrafica.destroy();
+            window.miGrafica = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: data.labels,
-                    datasets: [
-                        {
-                            label: data.nombre1,
-                            data: data.valores1,
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            tension: 0.3
-                        },
-                        {
-                            label: data.nombre2,
-                            data: data.valores2,
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            tension: 0.3
-                        }
-                    ]
+                    datasets: data.datasets
                 },
                 options: {
                     responsive: true,
-                    scales: {
-                        y: { beginAtZero: true }
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: data.titulo
+                        }
                     }
                 }
             });
