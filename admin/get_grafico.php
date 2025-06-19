@@ -1,214 +1,108 @@
-
 <?php
+session_start();
+if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'administrador') {
+    header('Location: ../login.php');
+    exit;
+}
+
 include_once '../conexion.php';
-header('Content-Type: application/json');
+include_once '../includes/header.php';
 
-$sensor1 = $_POST['sensor1'] ?? null;
-$sensor2 = $_POST['sensor2'] ?? null;
-$tipoGrafica = $_POST['tipoGrafica'] ?? 'historica';
-$anio = $_POST['anio'] ?? date('Y');
-$periodo = $_POST['periodo'] ?? 'dia';
-$fecha_inicio = $_POST['fecha_inicio'] ?? null;
-$fecha_fin = $_POST['fecha_fin'] ?? null;
-
-$response = [
-    'labels' => [],
-    'datasets' => [],
-    'titulo' => ''
-];
-
-function formatoFecha($periodo) {
-    return match ($periodo) {
-        'dia' => '%Y-%m-%d',
-        'semana' => '%Y-%u',
-        'mes' => '%Y-%m',
-        'anual' => '%Y',
-        default => '%Y-%m-%d'
-    };
-}
-
-function obtenerDatosCaudal($conexion, $sensor_id, $anio, $periodo) {
-    $formato = formatoFecha($periodo);
-    $stmt = $conexion->prepare("
-        SELECT DATE_FORMAT(fecha, ?) AS periodo, AVG(caudal_lps) AS promedio
-        FROM reportes
-        WHERE sensor_id = ? AND tipo_reporte = 'caudal' AND YEAR(fecha) = ?
-        GROUP BY periodo ORDER BY periodo
-    ");
-    $stmt->bind_param('sii', $formato, $sensor_id, $anio);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    $labels = [];
-    $datos = [];
-    while ($row = $result->fetch_assoc()) {
-        $labels[] = $row['periodo'];
-        $datos[] = round($row['promedio'], 2);
-    }
-    return [$labels, $datos];
-}
-
-function obtenerPorFechas($conexion, $sensor_id, $inicio, $fin) {
-    $stmt = $conexion->prepare("
-        SELECT DATE(fecha) AS dia, AVG(caudal_lps) AS promedio
-        FROM reportes
-        WHERE sensor_id = ? AND tipo_reporte = 'caudal' AND fecha BETWEEN ? AND ?
-        GROUP BY dia ORDER BY dia
-    ");
-    $stmt->bind_param('iss', $sensor_id, $inicio, $fin);
-    $stmt->execute();
-    $res = $stmt->get_result();
-
-    $labels = [];
-    $datos = [];
-    while ($r = $res->fetch_assoc()) {
-        $labels[] = $r['dia'];
-        $datos[] = round($r['promedio'], 2);
-    }
-    return [$labels, $datos];
-}
-
-if ($tipoGrafica === 'comparacion_sensores' && $sensor1 && $sensor2) {
-    [$l1, $d1] = obtenerDatosCaudal($conexion, $sensor1, $anio, $periodo);
-    [$l2, $d2] = obtenerDatosCaudal($conexion, $sensor2, $anio, $periodo);
-    $response['labels'] = array_unique(array_merge($l1, $l2));
-    $response['datasets'][] = ['label' => 'Sensor 1', 'data' => $d1];
-    $response['datasets'][] = ['label' => 'Sensor 2', 'data' => $d2];
-    $response['titulo'] = 'Comparación entre sensores';
-} elseif ($tipoGrafica === 'comparacion_fechas' && $sensor1 && $fecha_inicio && $fecha_fin) {
-    [$labels, $datos] = obtenerPorFechas($conexion, $sensor1, $fecha_inicio, $fecha_fin);
-    $response['labels'] = $labels;
-    $response['datasets'][] = ['label' => 'Sensor 1', 'data' => $datos];
-    $response['titulo'] = 'Comparación por fechas';
-} elseif ($tipoGrafica === 'comparacion_temporadas' && $sensor1) {
-    // Definir rangos fijos simulados para lluvias y sequía
-    $lluvia_ini = "$anio-02-01";
-    $lluvia_fin = "$anio-04-30";
-    $sequia_ini = "$anio-08-01";
-    $sequia_fin = "$anio-10-31";
-
-    [$l1, $d1] = obtenerPorFechas($conexion, $sensor1, $lluvia_ini, $lluvia_fin);
-    [$l2, $d2] = obtenerPorFechas($conexion, $sensor1, $sequia_ini, $sequia_fin);
-
-    $response['labels'] = ['Temporada de lluvia', 'Temporada de sequía'];
-    $response['datasets'][] = [
-        'label' => 'Promedios por temporada',
-        'data' => [round(array_sum($d1) / max(count($d1),1), 2), round(array_sum($d2) / max(count($d2),1), 2)]
-    ];
-    $response['titulo'] = 'Comparación por temporadas';
-} elseif ($tipoGrafica === 'historica' && $sensor1) {
-    [$labels, $datos] = obtenerDatosCaudal($conexion, $sensor1, $anio, $periodo);
-    $response['labels'] = $labels;
-    $response['datasets'][] = ['label' => 'Sensor 1', 'data' => $datos];
-    $response['titulo'] = 'Histórico por sensor';
-}
-
-echo json_encode($response);
+// Obtener sensores para el formulario
+$sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre ASC");
 ?>
 
-<?php
-include_once '../conexion.php';
-header('Content-Type: application/json');
+<div class="container mt-5">
+    <h2 class="mb-4">Visualización de Reportes</h2>
 
-$sensor1 = $_POST['sensor1'] ?? null;
-$sensor2 = $_POST['sensor2'] ?? null;
-$tipoGrafica = $_POST['tipoGrafica'] ?? 'historica';
-$anio = $_POST['anio'] ?? date('Y');
-$periodo = $_POST['periodo'] ?? 'dia';
-$fecha_inicio = $_POST['fecha_inicio'] ?? null;
-$fecha_fin = $_POST['fecha_fin'] ?? null;
+    <form id="formComparar" class="row g-3 mb-4">
+        <div class="col-md-4">
+            <label>Sensor 1:</label>
+            <select class="form-control" id="sensor1" name="sensor1" required>
+                <option value="">Seleccione</option>
+                <?php while ($s = $sensores->fetch_assoc()): ?>
+                    <option value="<?= $s['id'] ?>"><?= $s['nombre'] ?></option>
+                <?php endwhile; ?>
+            </select>
+        </div>
 
-$response = [
-    'labels' => [],
-    'datasets' => [],
-    'titulo' => ''
-];
+        <div class="col-md-4" id="sensor2Container" style="display: none;">
+            <label>Sensor 2 (para comparar):</label>
+            <select class="form-control" id="sensor2" name="sensor2">
+                <option value="">Seleccione</option>
+                <?php
+                $sensores->data_seek(0); // Reiniciar el puntero
+                while ($s = $sensores->fetch_assoc()): ?>
+                    <option value="<?= $s['id'] ?>"><?= $s['nombre'] ?></option>
+                <?php endwhile; ?>
+            </select>
+        </div>
 
-function formatoFecha($periodo) {
-    return match ($periodo) {
-        'dia' => '%Y-%m-%d',
-        'semana' => '%Y-%u',
-        'mes' => '%Y-%m',
-        'anual' => '%Y',
-        default => '%Y-%m-%d'
-    };
-}
+        <div class="col-md-4">
+            <label>Tipo de Gráfica:</label>
+            <select class="form-control" id="tipoGrafica" name="tipoGrafica" required>
+                <option value="historica">Histórica (por sensor)</option>
+                <option value="comparacion_fechas">Comparación por fechas</option>
+                <option value="comparacion_temporadas">Temporada lluvia/sequía</option>
+                <option value="comparacion_sensores">Comparación entre sensores</option>
+            </select>
+        </div>
 
-function obtenerDatosCaudal($conexion, $sensor_id, $anio, $periodo) {
-    $formato = formatoFecha($periodo);
-    $stmt = $conexion->prepare("
-        SELECT DATE_FORMAT(fecha, ?) AS periodo, AVG(caudal_lps) AS promedio
-        FROM reportes
-        WHERE sensor_id = ? AND tipo_reporte = 'caudal' AND YEAR(fecha) = ?
-        GROUP BY periodo ORDER BY periodo
-    ");
-    $stmt->bind_param('sii', $formato, $sensor_id, $anio);
-    $stmt->execute();
-    $result = $stmt->get_result();
+        <div class="col-md-3">
+            <label>Año:</label>
+            <input type="number" class="form-control" name="anio" value="<?= date('Y') ?>" required>
+        </div>
 
-    $labels = [];
-    $datos = [];
-    while ($row = $result->fetch_assoc()) {
-        $labels[] = $row['periodo'];
-        $datos[] = round($row['promedio'], 2);
-    }
-    return [$labels, $datos];
-}
+        <div class="col-md-3">
+            <label>Periodo:</label>
+            <select class="form-control" name="periodo">
+                <option value="dia">Diario</option>
+                <option value="semana">Semanal</option>
+                <option value="mes">Mensual</option>
+<option value="anual">Anual</option>
+            </select>
+        </div>
 
-function obtenerPorFechas($conexion, $sensor_id, $inicio, $fin) {
-    $stmt = $conexion->prepare("
-        SELECT DATE(fecha) AS dia, AVG(caudal_lps) AS promedio
-        FROM reportes
-        WHERE sensor_id = ? AND tipo_reporte = 'caudal' AND fecha BETWEEN ? AND ?
-        GROUP BY dia ORDER BY dia
-    ");
-    $stmt->bind_param('iss', $sensor_id, $inicio, $fin);
-    $stmt->execute();
-    $res = $stmt->get_result();
+        <div class="col-md-6 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100" id="botonComparar">Ver gráfica</button>
+        </div>
+    
+<div class="col-md-3" id="fechasComparacion" style="display:none;">
+    <label>Fecha inicio:</label>
+    <input type="date" class="form-control mb-2" id="fecha_inicio" name="fecha_inicio">
+    <label>Fecha fin:</label>
+    <input type="date" class="form-control" id="fecha_fin" name="fecha_fin">
+</div>
+</form>
 
-    $labels = [];
-    $datos = [];
-    while ($r = $res->fetch_assoc()) {
-        $labels[] = $r['dia'];
-        $datos[] = round($r['promedio'], 2);
-    }
-    return [$labels, $datos];
-}
+    <div>
+        <canvas id="graficaCaudal" height="300" style="display:block;" height="120"></canvas>
+    </div>
+</div>
 
-if ($tipoGrafica === 'comparacion_sensores' && $sensor1 && $sensor2) {
-    [$l1, $d1] = obtenerDatosCaudal($conexion, $sensor1, $anio, $periodo);
-    [$l2, $d2] = obtenerDatosCaudal($conexion, $sensor2, $anio, $periodo);
-    $response['labels'] = array_unique(array_merge($l1, $l2));
-    $response['datasets'][] = ['label' => 'Sensor 1', 'data' => $d1];
-    $response['datasets'][] = ['label' => 'Sensor 2', 'data' => $d2];
-    $response['titulo'] = 'Comparación entre sensores';
-} elseif ($tipoGrafica === 'comparacion_fechas' && $sensor1 && $fecha_inicio && $fecha_fin) {
-    [$labels, $datos] = obtenerPorFechas($conexion, $sensor1, $fecha_inicio, $fecha_fin);
-    $response['labels'] = $labels;
-    $response['datasets'][] = ['label' => 'Sensor 1', 'data' => $datos];
-    $response['titulo'] = 'Comparación por fechas';
-} elseif ($tipoGrafica === 'comparacion_temporadas' && $sensor1) {
-    // Definir rangos fijos simulados para lluvias y sequía
-    $lluvia_ini = "$anio-02-01";
-    $lluvia_fin = "$anio-04-30";
-    $sequia_ini = "$anio-08-01";
-    $sequia_fin = "$anio-10-31";
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    [$l1, $d1] = obtenerPorFechas($conexion, $sensor1, $lluvia_ini, $lluvia_fin);
-    [$l2, $d2] = obtenerPorFechas($conexion, $sensor1, $sequia_ini, $sequia_fin);
 
-    $response['labels'] = ['Temporada de lluvia', 'Temporada de sequía'];
-    $response['datasets'][] = [
-        'label' => 'Promedios por temporada',
-        'data' => [round(array_sum($d1) / max(count($d1),1), 2), round(array_sum($d2) / max(count($d2),1), 2)]
-    ];
-    $response['titulo'] = 'Comparación por temporadas';
-} elseif ($tipoGrafica === 'historica' && $sensor1) {
-    [$labels, $datos] = obtenerDatosCaudal($conexion, $sensor1, $anio, $periodo);
-    $response['labels'] = $labels;
-    $response['datasets'][] = ['label' => 'Sensor 1', 'data' => $datos];
-    $response['titulo'] = 'Histórico por sensor';
-}
 
-echo json_encode($response);
-?>
+
+<hr class="my-5">
+<div class="container">
+  <h4 class="mb-3">💧 Visualización Diaria de Caudales</h4>
+  <div class="row g-3 mb-3">
+    <div class="col-md-4">
+      <input type="date" id="filtroFechaAdmin" class="form-control">
+    </div>
+    <div class="col-md-4">
+      <select id="filtroSensorAdmin" class="form-select"></select>
+    </div>
+    <div class="col-md-4">
+      <button class="btn btn-outline-primary w-100" onclick="cargarGraficoCaudales()">Ver gráfico</button>
+    </div>
+  </div>
+  <canvas id="graficoCaudales" height="180"></canvas>
+</div>
+
+
+
+
+<?php include_once '../includes/footer.php'; ?>
