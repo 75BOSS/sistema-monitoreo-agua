@@ -31,7 +31,7 @@ $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre AS
             <select class="form-control" id="sensor2" name="sensor2">
                 <option value="">Seleccione</option>
                 <?php
-                $sensores->data_seek(0); // Reiniciar el puntero
+                $sensores->data_seek(0);
                 while ($s = $sensores->fetch_assoc()): ?>
                     <option value="<?= $s['id'] ?>"><?= $s['nombre'] ?></option>
                 <?php endwhile; ?>
@@ -50,59 +50,104 @@ $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre AS
 
         <div class="col-md-3">
             <label>Año:</label>
-            <input type="number" class="form-control" name="anio" value="<?= date('Y') ?>" required>
+            <input type="number" class="form-control" name="anio" id="anio" value="<?= date('Y') ?>" required>
         </div>
 
         <div class="col-md-3">
             <label>Periodo:</label>
-            <select class="form-control" name="periodo">
+            <select class="form-control" name="periodo" id="periodo">
                 <option value="dia">Diario</option>
                 <option value="semana">Semanal</option>
                 <option value="mes">Mensual</option>
-<option value="anual">Anual</option>
+                <option value="anual">Anual</option>
             </select>
         </div>
 
         <div class="col-md-6 d-flex align-items-end">
             <button type="submit" class="btn btn-primary w-100" id="botonComparar">Ver gráfica</button>
         </div>
-    
-<div class="col-md-3" id="fechasComparacion" style="display:none;">
-    <label>Fecha inicio:</label>
-    <input type="date" class="form-control mb-2" id="fecha_inicio" name="fecha_inicio">
-    <label>Fecha fin:</label>
-    <input type="date" class="form-control" id="fecha_fin" name="fecha_fin">
-</div>
-</form>
+    </form>
 
-    <div>
-        <canvas id="graficaCaudal" height="300" style="display:block;" height="120"></canvas>
+    <div style="max-width: 1000px; margin: 0 auto;">
+        <canvas id="graficaCaudal" height="180" style="width: 100%;"></canvas>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.getElementById('tipoGrafica').addEventListener('change', function () {
+    const sensor2 = document.getElementById('sensor2Container');
+    const boton = document.getElementById('botonComparar');
+    sensor2.style.display = this.value === 'comparacion_sensores' ? 'block' : 'none';
+    boton.textContent = this.value === 'comparacion_sensores' ? 'Comparar sensores' : 'Ver gráfica';
+});
 
+document.getElementById('formComparar').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const tipoGrafica = document.getElementById('tipoGrafica').value;
+    const sensor1 = document.getElementById('sensor1').value;
+    const sensor2 = document.getElementById('sensor2')?.value || '';
+    const periodo = document.getElementById('periodo').value;
+    const anio = document.getElementById('anio').value;
 
+    if (!sensor1) {
+        alert('Por favor selecciona al menos un sensor.');
+        return;
+    }
+    if (tipoGrafica === 'comparacion_sensores' && !sensor2) {
+        alert('Por favor selecciona el segundo sensor para comparar.');
+        return;
+    }
 
+    const datos = new URLSearchParams({ sensor1, sensor2, tipoGrafica, periodo, anio });
 
-<hr class="my-5">
-<div class="container">
-  <h4 class="mb-3">💧 Visualización Diaria de Caudales</h4>
-  <div class="row g-3 mb-3">
-    <div class="col-md-4">
-      <input type="date" id="filtroFechaAdmin" class="form-control">
-    </div>
-    <div class="col-md-4">
-      <select id="filtroSensorAdmin" class="form-select"></select>
-    </div>
-    <div class="col-md-4">
-      <button class="btn btn-outline-primary w-100" onclick="cargarGraficoCaudales()">Ver gráfico</button>
-    </div>
-  </div>
-  <canvas id="graficoCaudales" height="180"></canvas>
-</div>
+    fetch('get_grafico.php', {
+        method: 'POST',
+        body: datos
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data || !data.labels || data.labels.length === 0) {
+            alert("No se encontraron datos para los filtros seleccionados.");
+            return;
+        }
 
+        const ctx = document.getElementById('graficaCaudal').getContext('2d');
+        if (window.miGrafico) window.miGrafico.destroy();
 
+        const tipo = (tipoGrafica === 'comparacion_sensores') ? 'line' : 'bar';
+        const datasets = data.datasets.map(ds => ({
+            ...ds,
+            borderWidth: 2,
+            fill: false
+        }));
 
+        window.miGrafico = new Chart(ctx, {
+            type: tipo,
+            data: {
+                labels: data.labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: data.titulo
+                    },
+                    legend: {
+                        display: true
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    });
+});
+</script>
 
 <?php include_once '../includes/footer.php'; ?>
