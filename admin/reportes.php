@@ -12,10 +12,22 @@ $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre AS
 
     <form id="formReportes" class="row g-3 mb-4">
         <div class="col-md-4">
-            <label>Sensor:</label>
-            <select class="form-control" id="sensor" name="sensor" required>
+            <label>Sensor 1:</label>
+            <select class="form-control" id="sensor1" name="sensor1" required>
                 <option value="">Seleccione</option>
                 <?php while ($s = $sensores->fetch_assoc()): ?>
+                    <option value="<?= $s['id'] ?>"><?= $s['nombre'] ?></option>
+                <?php endwhile; ?>
+            </select>
+        </div>
+
+        <div class="col-md-4" id="sensor2Container" style="display: none;">
+            <label>Sensor 2 (para comparar):</label>
+            <select class="form-control" id="sensor2" name="sensor2">
+                <option value="">Seleccione</option>
+                <?php
+                $sensores->data_seek(0);
+                while ($s = $sensores->fetch_assoc()): ?>
                     <option value="<?= $s['id'] ?>"><?= $s['nombre'] ?></option>
                 <?php endwhile; ?>
             </select>
@@ -28,6 +40,7 @@ $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre AS
                 <option value="calidad">Calidad del agua</option>
                 <option value="comparacion_fechas">Comparación por fechas</option>
                 <option value="comparacion_temporadas">Temporada lluvia/sequía</option>
+                <option value="comparacion_sensores">Comparación entre sensores</option>
                 <option value="anual">Anual</option>
             </select>
         </div>
@@ -58,7 +71,7 @@ $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre AS
         </div>
 
         <div class="col-md-6 d-flex align-items-end">
-            <button type="submit" class="btn btn-success w-100">Ver gráfica</button>
+            <button type="submit" class="btn btn-success w-100" id="botonVer">Ver gráfica</button>
         </div>
     </form>
 
@@ -70,7 +83,18 @@ $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre AS
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.getElementById('tipoGrafica').addEventListener('change', function () {
+    const sensor2 = document.getElementById('sensor2Container');
     const fechaCampos = document.querySelectorAll('.fecha-rango');
+    const boton = document.getElementById('botonVer');
+
+    if (this.value === 'comparacion_sensores') {
+        sensor2.style.display = 'block';
+        boton.textContent = 'Comparar sensores';
+    } else {
+        sensor2.style.display = 'none';
+        boton.textContent = 'Ver gráfica';
+    }
+
     if (this.value === 'comparacion_fechas') {
         fechaCampos.forEach(el => el.style.display = 'block');
     } else {
