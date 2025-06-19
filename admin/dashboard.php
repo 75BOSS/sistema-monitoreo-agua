@@ -1,5 +1,8 @@
 <?php
-// admin/dashboard.php - Panel principal del administrador
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 session_start();
 if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'administrador') {
     header('Location: ../login.php');
@@ -8,6 +11,7 @@ if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'administrador') {
 
 include_once '../includes/conexion.php';
 include_once '../includes/header.php';
+
 
 // Conteos rápidos
 $total_usuarios = mysqli_fetch_assoc($conexion->query("SELECT COUNT(*) as total FROM usuarios"))['total'];
