@@ -16,19 +16,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($resultado->num_rows === 1) {
         $usuario = $resultado->fetch_assoc();
 
-        // Verifica la contraseña
+        // Excepción: acceso directo para técnico con correo 9876@papa.com
+        if (
+            $usuario['correo'] === '9876@papa.com' &&
+            $contrasena === '9876' &&
+            $usuario['rol'] === 'tecnico'
+        ) {
+            $_SESSION['id'] = $usuario['id'];
+            $_SESSION['nombre'] = $usuario['nombre'];
+            $_SESSION['rol'] = $usuario['rol'];
+            header('Location: tecnico/dashboard.php');
+            exit;
+        }
+
+        // Verificación normal de contraseña
         if (password_verify($contrasena, $usuario['contraseña'])) {
             $_SESSION['id'] = $usuario['id'];
             $_SESSION['nombre'] = $usuario['nombre'];
             $_SESSION['rol'] = $usuario['rol'];
 
-            // Redirigir según rol
+            // Redirigir según el rol
             switch ($usuario['rol']) {
                 case 'administrador':
                     header('Location: admin/dashboard.php');
                     exit;
                 case 'tecnico':
-                    header('Location: tecnico/dashboard.php'); // ✅ revisa que exista este archivo
+                    header('Location: tecnico/dashboard.php');
                     exit;
                 case 'usuario':
                     header('Location: usuario/dashboard.php');
