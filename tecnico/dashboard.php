@@ -69,6 +69,32 @@ $conn->close();
 
 <div class="content-section">
     <h2><i class="fas fa-chart-line"></i> Resumen del Sistema</h2>
+=======
+session_start();
+if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'tecnico') {
+    header('Location: ../login.php');
+    exit;
+}
+
+include '../conexion.php';
+
+// Conteos rápidos
+$sensores = mysqli_query($conexion, "SELECT COUNT(*) as total FROM sensores");
+$averiados = mysqli_query($conexion, "SELECT COUNT(*) as total FROM sensores WHERE estado = 'averiado'");
+$reparacion = mysqli_query($conexion, "SELECT COUNT(*) as total FROM reparaciones WHERE estado = 'en_reparacion'");
+$alertas = mysqli_query($conexion, "SELECT COUNT(*) as total FROM reportes WHERE (caudal_lps > 100 OR turbidez = 1 OR olor = 1 OR color = 1 OR residuos = 1)");
+?>
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Técnico</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+    <h1>Bienvenido, Técnico <?= $_SESSION['nombre'] ?></h1>
+>>>>>>> af0a95a075714694cfb09f13628ce3b11463827f
 
     <div class="dashboard-summary">
         <div class="summary-card functional">
