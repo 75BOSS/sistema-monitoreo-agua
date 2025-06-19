@@ -1,38 +1,21 @@
 <?php
 session_start();
-if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'administrador') {
-    header('Location: ../login.php');
-    exit;
-}
-
 include_once '../conexion.php';
 include_once '../includes/header.php';
 
-// Obtener sensores para el formulario
+// Obtener sensores
 $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre ASC");
 ?>
 
 <div class="container mt-5">
     <h2 class="mb-4">Visualización de Reportes</h2>
 
-    <form id="formComparar" class="row g-3 mb-4">
+    <form id="formReportes" class="row g-3 mb-4">
         <div class="col-md-4">
-            <label>Sensor 1:</label>
-            <select class="form-control" id="sensor1" name="sensor1" required>
+            <label>Sensor:</label>
+            <select class="form-control" id="sensor" name="sensor" required>
                 <option value="">Seleccione</option>
                 <?php while ($s = $sensores->fetch_assoc()): ?>
-                    <option value="<?= $s['id'] ?>"><?= $s['nombre'] ?></option>
-                <?php endwhile; ?>
-            </select>
-        </div>
-
-        <div class="col-md-4" id="sensor2Container" style="display: none;">
-            <label>Sensor 2 (para comparar):</label>
-            <select class="form-control" id="sensor2" name="sensor2">
-                <option value="">Seleccione</option>
-                <?php
-                $sensores->data_seek(0); // Reiniciar el puntero
-                while ($s = $sensores->fetch_assoc()): ?>
                     <option value="<?= $s['id'] ?>"><?= $s['nombre'] ?></option>
                 <?php endwhile; ?>
             </select>
@@ -41,67 +24,62 @@ $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre AS
         <div class="col-md-4">
             <label>Tipo de Gráfica:</label>
             <select class="form-control" id="tipoGrafica" name="tipoGrafica" required>
-                <option value="historica">Histórica (por sensor)</option>
+                <option value="historica">Histórica (caudal)</option>
+                <option value="calidad">Calidad del agua</option>
                 <option value="comparacion_fechas">Comparación por fechas</option>
                 <option value="comparacion_temporadas">Temporada lluvia/sequía</option>
-                <option value="comparacion_sensores">Comparación entre sensores</option>
+                <option value="anual">Anual</option>
             </select>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-2">
             <label>Año:</label>
-            <input type="number" class="form-control" name="anio" value="<?= date('Y') ?>" required>
+            <input type="number" class="form-control" name="anio" value="<?= date('Y') ?>">
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-2">
             <label>Periodo:</label>
             <select class="form-control" name="periodo">
                 <option value="dia">Diario</option>
                 <option value="semana">Semanal</option>
                 <option value="mes">Mensual</option>
+                <option value="anual">Anual</option>
             </select>
         </div>
 
+        <div class="col-md-3 fecha-rango" style="display: none;">
+            <label>Fecha inicio:</label>
+            <input type="date" class="form-control" name="fecha_inicio">
+        </div>
+
+        <div class="col-md-3 fecha-rango" style="display: none;">
+            <label>Fecha fin:</label>
+            <input type="date" class="form-control" name="fecha_fin">
+        </div>
+
         <div class="col-md-6 d-flex align-items-end">
-            <button type="submit" class="btn btn-primary w-100" id="botonComparar">Ver gráfica</button>
+            <button type="submit" class="btn btn-success w-100">Ver gráfica</button>
         </div>
     </form>
 
     <div>
-        <canvas id="graficaCaudal" height="120"></canvas>
+        <canvas id="graficaReporte" height="120"></canvas>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.getElementById('tipoGrafica').addEventListener('change', function () {
-    const sensor2 = document.getElementById('sensor2Container');
-    const boton = document.getElementById('botonComparar');
-    if (this.value === 'comparacion_sensores') {
-        sensor2.style.display = 'block';
-        boton.textContent = 'Comparar sensores';
+    const fechaCampos = document.querySelectorAll('.fecha-rango');
+    if (this.value === 'comparacion_fechas') {
+        fechaCampos.forEach(el => el.style.display = 'block');
     } else {
-        sensor2.style.display = 'none';
-        boton.textContent = 'Ver gráfica';
+        fechaCampos.forEach(el => el.style.display = 'none');
     }
 });
 
-document.getElementById('formComparar').addEventListener('submit', function (e) {
+document.getElementById('formReportes').addEventListener('submit', function (e) {
     e.preventDefault();
-    const tipoGrafica = document.getElementById('tipoGrafica').value;
-    const sensor1 = document.getElementById('sensor1').value;
-    const sensor2 = document.getElementById('sensor2').value;
-
-    if (!sensor1) {
-        alert('Por favor selecciona al menos un sensor.');
-        return;
-    }
-
-    if (tipoGrafica === 'comparacion_sensores' && !sensor2) {
-        alert('Por favor selecciona el segundo sensor para comparar.');
-        return;
-    }
-
     const formData = new FormData(this);
 
     fetch('get_grafico.php', {
@@ -110,10 +88,10 @@ document.getElementById('formComparar').addEventListener('submit', function (e) 
     })
     .then(res => res.json())
     .then(data => {
-        const ctx = document.getElementById('graficaCaudal').getContext('2d');
+        const ctx = document.getElementById('graficaReporte').getContext('2d');
         if (window.miGrafica) window.miGrafica.destroy();
         window.miGrafica = new Chart(ctx, {
-            type: 'line',
+            type: 'bar',
             data: {
                 labels: data.labels,
                 datasets: data.datasets
