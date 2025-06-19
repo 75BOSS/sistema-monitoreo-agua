@@ -5,8 +5,8 @@ include_once 'conexion.php';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $correo = $_POST['correo'];
-    $contrasena = $_POST['contrasena'];
+    $correo = $_POST['correo'] ?? '';
+    $contrasena = $_POST['contrasena'] ?? '';
 
     $query = $conexion->prepare("SELECT * FROM usuarios WHERE correo = ?");
     $query->bind_param("s", $correo);
@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($resultado->num_rows === 1) {
         $usuario = $resultado->fetch_assoc();
 
-        // COMPARACIÓN DIRECTA TEMPORAL (ya que no usas password_hash)
+        // SIN password_verify porque las contraseñas no están hasheadas
         if ($contrasena === $usuario['contraseña']) {
             $_SESSION['id'] = $usuario['id'];
             $_SESSION['nombre'] = $usuario['nombre'];
@@ -46,51 +46,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            background: #f1f4f9;
+            background: #f0f2f5;
             display: flex;
             align-items: center;
             justify-content: center;
             height: 100vh;
-            margin: 0;
         }
-        .login-container {
-            background: #ffffff;
-            padding: 2rem 3rem;
-            border-radius: 10px;
-            box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.1);
+        .login-box {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 0 25px rgba(0,0,0,0.05);
+            max-width: 400px;
             width: 100%;
-            max-width: 420px;
-        }
-        .login-container h2 {
-            margin-bottom: 1.5rem;
-            color: #333;
         }
         .btn-primary {
-            background-color: #007bff;
-            border: none;
             width: 100%;
-        }
-        .form-control:focus {
-            box-shadow: none;
-            border-color: #007bff;
         }
     </style>
 </head>
 <body>
 
-<div class="login-container">
-    <h2 class="text-center">Iniciar Sesión</h2>
+<div class="login-box">
+    <h2 class="text-center mb-4">Iniciar Sesión</h2>
+
     <?php if ($error): ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+        <div class="alert alert-danger text-center"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
+
     <form method="POST">
         <div class="mb-3">
             <label for="correo" class="form-label">Correo electrónico</label>
-            <input type="email" name="correo" id="correo" class="form-control" required>
+            <input type="email" name="correo" class="form-control" required>
         </div>
         <div class="mb-3">
             <label for="contrasena" class="form-label">Contraseña</label>
-            <input type="password" name="contrasena" id="contrasena" class="form-control" required>
+            <input type="password" name="contrasena" class="form-control" required>
         </div>
         <button type="submit" class="btn btn-primary">Entrar</button>
     </form>
