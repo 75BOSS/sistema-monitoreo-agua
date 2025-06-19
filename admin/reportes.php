@@ -69,7 +69,7 @@ $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre AS
     </form>
 
     <div>
-        <canvas id="graficaCaudal" height="300" style="display:block;" height="120"></canvas>
+        <canvas id="graficaCaudal" height="300" style="display:block;"></canvas>
     </div>
 </div>
 
