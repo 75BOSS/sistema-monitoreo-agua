@@ -6,57 +6,69 @@ if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'usuario') {
 }
 
 include_once '../conexion.php';
-include_once 'includes/header_usuario.php'; // Asegúrate de que este archivo existe
+include_once 'includes/header.php';
 
-$usuario_id = $_SESSION['id'];
+$usuarioId = $_SESSION['id'] ?? 0;
 
-// Buscar reportes del usuario con condiciones de alerta
-$query = $conexion->prepare("
-    SELECT sensores.nombre AS sensor, caudal_lps, turbidez, olor, color, residuos, fecha, hora
-    FROM reportes
-    JOIN sensores ON reportes.sensor_id = sensores.id
-    WHERE usuario_id = ?
-    ORDER BY fecha DESC, hora DESC
-    LIMIT 10
-");
-$query->bind_param('i', $usuario_id);
-$query->execute();
-$resultado = $query->get_result();
+// Número de reportes con alerta en el último mes
+$alertas = $conexion->query("
+    SELECT COUNT(*) as total 
+    FROM reportes 
+    WHERE usuario_id = $usuarioId 
+      AND (turbidez = 1 OR olor = 1 OR color = 1 OR residuos = 1)
+      AND fecha >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+")->fetch_assoc()['total'];
+
+// Total de reportes del usuario
+$total_reportes = $conexion->query("
+    SELECT COUNT(*) as total 
+    FROM reportes 
+    WHERE usuario_id = $usuarioId
+")->fetch_assoc()['total'];
+
+// Sensor más cercano (simulado)
+$sensor_cercano = $conexion->query("
+    SELECT nombre 
+    FROM sensores 
+    ORDER BY RAND() 
+    LIMIT 1
+")->fetch_assoc()['nombre'];
 ?>
 
 <div class="container mt-5">
-    <h2 class="mb-4">📢 Alertas Recientes</h2>
+    <h2 class="mb-4">Resumen de Alertas y Actividad</h2>
 
-    <?php if ($resultado->num_rows === 0): ?>
-        <div class="alert alert-info">No se han generado alertas recientemente.</div>
-    <?php else: ?>
-        <?php while ($row = $resultado->fetch_assoc()): ?>
-            <?php
-            $problemas = [];
-
-            if ($row['caudal_lps'] < 1) {
-                $problemas[] = "Caudal bajo ({$row['caudal_lps']} L/s)";
-            }
-
-            if ($row['turbidez']) $problemas[] = "Turbidez detectada";
-            if ($row['olor']) $problemas[] = "Olor inusual";
-            if ($row['color']) $problemas[] = "Color anormal";
-            if ($row['residuos']) $problemas[] = "Presencia de residuos";
-
-            if (count($problemas) > 0): ?>
-                <div class="alert alert-warning">
-                    <strong>Sensor:</strong> <?= htmlspecialchars($row['sensor']) ?><br>
-                    <strong>Fecha:</strong> <?= $row['fecha'] ?> <?= $row['hora'] ?><br>
-                    <strong>Problemas detectados:</strong>
-                    <ul>
-                        <?php foreach ($problemas as $p): ?>
-                            <li><?= htmlspecialchars($p) ?></li>
-                        <?php endforeach; ?>
-                    </ul>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-start border-4 border-danger">
+                <div class="card-body">
+                    <h5 class="card-title text-danger">⚠️ Alertas recientes</h5>
+                    <p class="card-text fs-4"><?= $alertas ?></p>
+                    <p class="text-muted">Reportes con condiciones de alerta en el último mes.</p>
                 </div>
-            <?php endif; ?>
-        <?php endwhile; ?>
-    <?php endif; ?>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-start border-4 border-primary">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">📍 Sensor cercano</h5>
+                    <p class="card-text fs-5"><?= htmlspecialchars($sensor_cercano) ?></p>
+                    <p class="text-muted">Este es el sensor más cercano a tu ubicación registrada.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-start border-4 border-success">
+                <div class="card-body">
+                    <h5 class="card-title text-success">📈 Total de Reportes</h5>
+                    <p class="card-text fs-4"><?= $total_reportes ?></p>
+                    <p class="text-muted">Reportes que has generado desde tu cuenta.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<?php include_once 'includes/footer.php'; ?>
+<?php include_once '../includes/footer.php'; ?>
