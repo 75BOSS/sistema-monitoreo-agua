@@ -1,5 +1,5 @@
-
 <?php
+// dashboard.php para TECNICO
 session_start();
 if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'tecnico') {
     header('Location: ../login.php');
