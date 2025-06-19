@@ -106,7 +106,8 @@ form.addEventListener('submit', function(e) {
         formData.append('fecha_fin', document.getElementById('fecha_fin').value);
     }
 
-    fetch('../get_grafico.php', {
+    
+    fetch('get_grafico_usuario.php', {
         method: 'POST',
         body: formData
     })
