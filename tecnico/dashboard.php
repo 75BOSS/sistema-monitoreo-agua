@@ -1,17 +1,17 @@
 <?php
 session_start();
-if (!isset($_SESSION['usuario']) || $_SESSION['rol'] !== 'tecnico') {
+if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'tecnico') {
     header('Location: ../login.php');
     exit;
 }
 
-include '../conexion.php'; // tu archivo de conexión
+include '../conexion.php';
 
 // Conteos rápidos
-$sensores = mysqli_query($conn, "SELECT COUNT(*) as total FROM sensores");
-$averiados = mysqli_query($conn, "SELECT COUNT(*) as total FROM sensores WHERE estado = 'averiado'");
-$reparacion = mysqli_query($conn, "SELECT COUNT(*) as total FROM reparaciones WHERE estado = 'en_reparacion'");
-$alertas = mysqli_query($conn, "SELECT COUNT(*) as total FROM reportes WHERE (caudal_lps > 100 OR turbidez = 1 OR olor = 1 OR color = 1 OR residuos = 1)"); // ejemplo de umbral
+$sensores = mysqli_query($conexion, "SELECT COUNT(*) as total FROM sensores");
+$averiados = mysqli_query($conexion, "SELECT COUNT(*) as total FROM sensores WHERE estado = 'averiado'");
+$reparacion = mysqli_query($conexion, "SELECT COUNT(*) as total FROM reparaciones WHERE estado = 'en_reparacion'");
+$alertas = mysqli_query($conexion, "SELECT COUNT(*) as total FROM reportes WHERE (caudal_lps > 100 OR turbidez = 1 OR olor = 1 OR color = 1 OR residuos = 1)");
 ?>
 
 <!DOCTYPE html>
@@ -22,7 +22,7 @@ $alertas = mysqli_query($conn, "SELECT COUNT(*) as total FROM reportes WHERE (ca
     <link rel="stylesheet" href="estilos.css">
 </head>
 <body>
-    <h1>Bienvenido, Técnico <?= $_SESSION['usuario'] ?></h1>
+    <h1>Bienvenido, Técnico <?= $_SESSION['nombre'] ?></h1>
 
     <div class="dashboard">
         <div class="card">Sensores Totales: <?= mysqli_fetch_assoc($sensores)['total'] ?></div>

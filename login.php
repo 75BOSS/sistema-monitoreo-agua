@@ -4,7 +4,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 session_start();
-require_once 'includes/db.php';
+require_once 'conexion.php';
 
 $mensaje = "";
 
@@ -12,7 +12,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $correo = $_POST['correo'];
     $clave = hash('sha256', $_POST['clave']);
 
-    $stmt = $conn->prepare("SELECT id, nombre, rol FROM usuarios WHERE correo = ? AND contraseña = ?");
+    $stmt = $conexion->prepare("SELECT id, nombre, rol FROM usuarios WHERE correo = ? AND contraseña = ?");
     $stmt->bind_param("ss", $correo, $clave);
     $stmt->execute();
     $stmt->store_result();
