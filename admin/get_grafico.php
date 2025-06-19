@@ -82,4 +82,38 @@ if ($tipoGrafica === 'comparacion_sensores' && $sensor1 && $sensor2) {
     $response['titulo'] = $titulos[$tipoGrafica] ?? 'Gráfica del sensor';
 }
 
+
+if ($tipoGrafica === 'temporada' && $sensor1) {
+    $sql = "SELECT MONTH(fecha) as mes, caudal_lps FROM reportes
+            WHERE sensor_id = ? AND tipo_reporte = 'caudal'";
+    $stmt = $conexion->prepare($sql);
+    $stmt->execute([$sensor1]);
+    $datos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $lluvia = [];
+    $sequia = [];
+
+    foreach ($datos as $dato) {
+        $mes = (int)$dato['mes'];
+        $caudal = (float)$dato['caudal_lps'];
+
+        if (in_array($mes, [12, 1, 2, 3, 4, 5])) {
+            $lluvia[] = $caudal;
+        } else {
+            $sequia[] = $caudal;
+        }
+    }
+
+    $promLluvia = count($lluvia) > 0 ? array_sum($lluvia) / count($lluvia) : 0;
+    $promSequia = count($sequia) > 0 ? array_sum($sequia) / count($sequia) : 0;
+
+    $response['labels'] = ['Temporada de Lluvia', 'Temporada de Sequía'];
+    $response['datasets'][] = [
+        'label' => 'Promedio de Caudal (LPS)',
+        'data' => [$promLluvia, $promSequia]
+    ];
+    $response['titulo'] = 'Comparación por Temporadas';
+}
+
+
 echo json_encode($response);
