@@ -297,4 +297,68 @@ const tipo = (tipoGrafica === 'comparacion_sensores') ? 'line' : 'bar';
 });
 </script>
 
+
+<hr class="my-5">
+<div class="container">
+  <h4 class="mb-3">💧 Visualización Diaria de Caudales</h4>
+  <div class="row g-3 mb-3">
+    <div class="col-md-4">
+      <input type="date" id="filtroFechaAdmin" class="form-control">
+    </div>
+    <div class="col-md-4">
+      <select id="filtroSensorAdmin" class="form-select"></select>
+    </div>
+    <div class="col-md-4">
+      <button class="btn btn-outline-primary w-100" onclick="cargarGraficoCaudales()">Ver gráfico</button>
+    </div>
+  </div>
+  <canvas id="graficoCaudales" height="180"></canvas>
+</div>
+
+<script>
+function cargarGraficoCaudales() {
+  const fecha = document.getElementById('filtroFechaAdmin').value;
+  const sensor = document.getElementById('filtroSensorAdmin').value;
+  if (!fecha || !sensor) return alert('Selecciona una fecha y un sensor');
+
+  fetch('get_caudal_dia.php', {
+    method: 'POST',
+    body: new URLSearchParams({ fecha, sensor })
+  })
+  .then(res => res.json())
+  .then(data => {
+    new Chart(document.getElementById('graficoCaudales'), {
+      type: 'line',
+      data: {
+        labels: data.labels,
+        datasets: data.datasets
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          title: {
+            display: true,
+            text: 'Caudal registrado por hora'
+          }
+        }
+      }
+    });
+  });
+}
+
+// Llenar automáticamente el selector de sensores
+fetch('get_sensores.php')
+  .then(res => res.json())
+  .then(data => {
+    const select = document.getElementById('filtroSensorAdmin');
+    data.forEach(sensor => {
+      const opt = document.createElement('option');
+      opt.value = sensor.id;
+      opt.textContent = sensor.nombre;
+      select.appendChild(opt);
+    });
+  });
+</script>
+
+
 <?php include_once '../includes/footer.php'; ?>
