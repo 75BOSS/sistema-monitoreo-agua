@@ -1,36 +1,35 @@
 <?php
-// eliminar_usuario.php - Lógica para eliminar un usuario desde el panel de administrador
+// admin/eliminar_usuario.php
 session_start();
 if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'administrador') {
     header('Location: ../login.php');
     exit;
 }
 
-require_once '../includes/conexion.php';
+require_once '../conexion.php';
 
+// Verifica si se recibió un ID válido por POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
     $id = intval($_POST['id']);
 
-    // Verificar que no se elimine el usuario administrador actual
-    if ($id === $_SESSION['id']) {
-        $_SESSION['mensaje_error'] = 'No puedes eliminar tu propio usuario.';
-        header('Location: usuarios.php');
+    // Evitar que un administrador se elimine a sí mismo
+    if ($_SESSION['id'] == $id) {
+        header('Location: usuarios.php?error=no_autodestruccion');
         exit;
     }
 
-    // Ejecutar la eliminación
+    // Eliminar el usuario
     $stmt = $conexion->prepare("DELETE FROM usuarios WHERE id = ?");
-    $stmt->bind_param('i', $id);
+    $stmt->bind_param("i", $id);
 
     if ($stmt->execute()) {
-        $_SESSION['mensaje_exito'] = 'Usuario eliminado correctamente.';
+        header('Location: usuarios.php?exito=usuario_eliminado');
     } else {
-        $_SESSION['mensaje_error'] = 'Error al eliminar el usuario.';
+        header('Location: usuarios.php?error=fallo_eliminacion');
     }
 
     $stmt->close();
+} else {
+    header('Location: usuarios.php?error=sin_datos');
 }
-
-header('Location: usuarios.php');
 exit;
-?>
