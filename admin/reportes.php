@@ -68,10 +68,9 @@ $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre AS
         </div>
     </form>
 
-    <div>
-        <canvas id="graficaCaudal" height="300" style="display:block;"></canvas>
-    </div>
-</div>
+<div style="max-width: 900px; margin: 0 auto;">
+  <canvas id="graficaCaudal" height="200" style="display: block; width: 100%;"></canvas>
+</div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
