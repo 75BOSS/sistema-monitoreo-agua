@@ -83,36 +83,25 @@ if ($tipoGrafica === 'comparacion_sensores' && $sensor1 && $sensor2) {
 }
 
 
-if ($tipoGrafica === 'temporada' && $sensor1) {
-    $sql = "SELECT MONTH(fecha) as mes, caudal_lps FROM reportes
-            WHERE sensor_id = ? AND tipo_reporte = 'caudal'";
-    $stmt = $conexion->prepare($sql);
-    $stmt->execute([$sensor1]);
+if ($tipoGrafica === 'comparacion_fechas' && $sensor1 && $fecha_inicio && $fecha_fin) {
+    $formato = formatoFecha($periodo);
+    $stmt = $conexion->prepare("
+        SELECT DATE_FORMAT(fecha, ?) as periodo, AVG(caudal_lps) as caudal
+        FROM reportes
+        WHERE sensor_id = ? AND tipo_reporte = 'caudal'
+        AND fecha BETWEEN ? AND ?
+        GROUP BY periodo
+        ORDER BY periodo
+    ");
+    $stmt->execute([$formato, $sensor1, $fecha_inicio, $fecha_fin]);
     $datos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $lluvia = [];
-    $sequia = [];
-
-    foreach ($datos as $dato) {
-        $mes = (int)$dato['mes'];
-        $caudal = (float)$dato['caudal_lps'];
-
-        if (in_array($mes, [12, 1, 2, 3, 4, 5])) {
-            $lluvia[] = $caudal;
-        } else {
-            $sequia[] = $caudal;
-        }
-    }
-
-    $promLluvia = count($lluvia) > 0 ? array_sum($lluvia) / count($lluvia) : 0;
-    $promSequia = count($sequia) > 0 ? array_sum($sequia) / count($sequia) : 0;
-
-    $response['labels'] = ['Temporada de Lluvia', 'Temporada de Sequía'];
+    $response['labels'] = array_column($datos, 'periodo');
     $response['datasets'][] = [
-        'label' => 'Promedio de Caudal (LPS)',
-        'data' => [$promLluvia, $promSequia]
+        'label' => 'Caudal Promedio',
+        'data' => array_column($datos, 'caudal')
     ];
-    $response['titulo'] = 'Comparación por Temporadas';
+    $response['titulo'] = 'Caudal entre fechas seleccionadas';
 }
 
 
