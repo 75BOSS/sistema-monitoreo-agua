@@ -1,12 +1,13 @@
 <?php
-$host = "localhost";
-$usuario = "u240362798_sistemaagua";
-$contrasena = "glcp,.?2A.";
-$base_datos = "u240362798_sistemaagua";
+$host = 'srv1282.hstgr.io'; // Este es el host de Hostinger
+$db   = 'u240362798_sistemaagua';
+$user = 'u240362798_sistemaagua';
+$pass = 'glcp.,?2A.'; // Tu contraseña
 
-$conn = new mysqli($host, $usuario, $contrasena, $base_datos);
+$conn = new mysqli($host, $user, $pass, $db);
 
+// Verifica la conexión
 if ($conn->connect_error) {
-    die("Error de conexión: " . $conn->connect_error);
+    die("Conexión fallida: " . $conn->connect_error);
 }
 ?>
