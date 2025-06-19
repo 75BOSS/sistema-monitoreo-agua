@@ -189,3 +189,5 @@ elseif ($tipoGrafica === 'calidad' && $sensor1) {
         ['label' => 'Color', 'data' => $color, 'backgroundColor' => 'rgba(54, 162, 235, 0.5)'],
         ['label' => 'Residuos', 'data' => $residuos, 'backgroundColor' => 'rgba(153, 102, 255, 0.5)']
     ];
+
+echo json_encode($response);
