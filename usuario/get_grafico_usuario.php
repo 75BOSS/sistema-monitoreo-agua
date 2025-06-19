@@ -1,13 +1,42 @@
 <?php
-header('Content-Type: application/json');
-require_once 'conexion.php';
+include_once '../conexion.php';
 
-$sensor = $_POST['sensor1'] ?? null;
-$tipo = $_POST['tipoGrafica'] ?? null;
+header('Content-Type: application/json');
+
+$sensor1 = $_POST['sensor1'] ?? null;
+$sensor2 = $_POST['sensor2'] ?? null;
+$tipoGrafica = $_POST['tipoGrafica'] ?? 'historica';
 $anio = $_POST['anio'] ?? date('Y');
-$periodo = $_POST['periodo'] ?? 'mes';
-$fecha_inicio = $_POST['fecha_inicio'] ?? null;
-$fecha_fin = $_POST['fecha_fin'] ?? null;
+$periodo = $_POST['periodo'] ?? 'dia';
+
+function obtenerDatos($conexion, $sensor_id, $anio, $periodo) {
+    $formatoFecha = match ($periodo) {
+        'dia' => '%Y-%m-%d',
+        'semana' => '%Y-%u',
+        'mes' => '%Y-%m',
+        default => '%Y-%m-%d'
+    };
+
+    $query = $conexion->prepare("
+        SELECT DATE_FORMAT(fecha, ?) AS periodo, AVG(caudal_lps) AS promedio
+        FROM reportes
+        WHERE sensor_id = ? AND tipo_reporte = 'caudal' AND YEAR(fecha) = ?
+        GROUP BY periodo
+        ORDER BY periodo ASC
+    ");
+    $query->bind_param('sii', $formatoFecha, $sensor_id, $anio);
+    $query->execute();
+    $result = $query->get_result();
+
+    $labels = [];
+    $data = [];
+    while ($row = $result->fetch_assoc()) {
+        $labels[] = $row['periodo'];
+        $data[] = round($row['promedio'], 2);
+    }
+
+    return [$labels, $data];
+}
 
 $response = [
     'labels' => [],
@@ -15,90 +44,65 @@ $response = [
     'titulo' => ''
 ];
 
-if (!$sensor || !$tipo) {
-    echo json_encode($response);
-    exit;
+if ($tipoGrafica === 'comparacion_sensores' && $sensor1 && $sensor2) {
+    [$labels1, $data1] = obtenerDatos($conexion, $sensor1, $anio, $periodo);
+    [$labels2, $data2] = obtenerDatos($conexion, $sensor2, $anio, $periodo);
+
+    $response['labels'] = array_unique(array_merge($labels1, $labels2));
+    $response['datasets'][] = [
+        'label' => 'Sensor 1',
+        'data' => $data1,
+        'borderColor' => 'rgba(54, 162, 235, 1)',
+        'backgroundColor' => 'rgba(54, 162, 235, 0.2)',
+        'fill' => false
+    ];
+    $response['datasets'][] = [
+        'label' => 'Sensor 2',
+        'data' => $data2,
+        'borderColor' => 'rgba(255, 99, 132, 1)',
+        'backgroundColor' => 'rgba(255, 99, 132, 0.2)',
+        'fill' => false
+    ];
+    $response['titulo'] = 'Comparación entre sensores';
+} elseif ($sensor1) {
+    [$labels, $data] = obtenerDatos($conexion, $sensor1, $anio, $periodo);
+    $response['labels'] = $labels;
+    $response['datasets'][] = [
+        'label' => 'Sensor',
+        'data' => $data,
+        'borderColor' => 'rgba(75, 192, 192, 1)',
+        'backgroundColor' => 'rgba(75, 192, 192, 0.2)',
+        'fill' => false
+    ];
+    $titulos = [
+        'historica' => 'Histórico del sensor',
+        'comparacion_fechas' => 'Comparación por fechas',
+        'comparacion_temporadas' => 'Temporadas lluvia vs. sequía'
+    ];
+    $response['titulo'] = $titulos[$tipoGrafica] ?? 'Gráfica del sensor';
 }
 
-function obtenerDatos($conexion, $sensor, $condicion, $groupBy) {
-    $query = "SELECT $groupBy AS etiqueta, AVG(caudal_lps) AS promedio
-              FROM reportes
-              WHERE sensor_id = ? AND tipo_reporte = 'caudal' AND $condicion
-              GROUP BY etiqueta
-              ORDER BY etiqueta";
-    $stmt = $conexion->prepare($query);
-    $stmt->bind_param("i", $sensor);
-    $stmt->execute();
-    $result = $stmt->get_result();
 
-    $labels = [];
-    $data = [];
-    while ($row = $result->fetch_assoc()) {
-        $labels[] = $row['etiqueta'];
-        $data[] = round($row['promedio'], 2);
-    }
+if ($tipoGrafica === 'comparacion_fechas' && $sensor1 && $fecha_inicio && $fecha_fin) {
+    $formato = formatoFecha($periodo);
+    $stmt = $conexion->prepare("
+        SELECT DATE_FORMAT(fecha, ?) as periodo, AVG(caudal_lps) as caudal
+        FROM reportes
+        WHERE sensor_id = ? AND tipo_reporte = 'caudal'
+        AND fecha BETWEEN ? AND ?
+        GROUP BY periodo
+        ORDER BY periodo
+    ");
+    $stmt->execute([$formato, $sensor1, $fecha_inicio, $fecha_fin]);
+    $datos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    return [$labels, $data];
+    $response['labels'] = array_column($datos, 'periodo');
+    $response['datasets'][] = [
+        'label' => 'Caudal Promedio',
+        'data' => array_column($datos, 'caudal')
+    ];
+    $response['titulo'] = 'Caudal entre fechas seleccionadas';
 }
 
-switch ($tipo) {
-    case 'historica':
-        $condicion = "YEAR(fecha) = $anio";
-        $groupBy = match ($periodo) {
-            'dia' => "DATE(fecha)",
-            'semana' => "WEEK(fecha)",
-            'mes' => "MONTH(fecha)",
-            default => "MONTH(fecha)"
-        };
-        [$labels, $data] = obtenerDatos($conexion, $sensor, $condicion, $groupBy);
-        $response['labels'] = $labels;
-        $response['datasets'][] = [
-            'label' => 'Caudal Promedio',
-            'data' => $data,
-            'borderColor' => 'blue',
-            'fill' => false
-        ];
-        $response['titulo'] = "Histórico de caudal - $anio";
-        break;
-
-    case 'comparacion_fechas':
-        if (!$fecha_inicio || !$fecha_fin) break;
-        $condicion = "fecha BETWEEN '$fecha_inicio' AND '$fecha_fin'";
-        $groupBy = "DATE(fecha)";
-        [$labels, $data] = obtenerDatos($conexion, $sensor, $condicion, $groupBy);
-        $response['labels'] = $labels;
-        $response['datasets'][] = [
-            'label' => 'Caudal Promedio',
-            'data' => $data,
-            'borderColor' => 'green',
-            'fill' => false
-        ];
-        $response['titulo'] = "Comparación de caudal entre fechas";
-        break;
-
-    case 'comparacion_temporadas':
-        $temporadas = [
-            'Lluvias' => ['inicio' => "$anio-01-01", 'fin' => "$anio-03-31"],
-            'Sequía' => ['inicio' => "$anio-07-01", 'fin' => "$anio-09-30"]
-        ];
-        $response['labels'] = array_keys($temporadas);
-        foreach ($temporadas as $nombre => $rango) {
-            $query = "SELECT AVG(caudal_lps) AS promedio
-                      FROM reportes
-                      WHERE sensor_id = ? AND tipo_reporte = 'caudal'
-                      AND fecha BETWEEN ? AND ?";
-            $stmt = $conexion->prepare($query);
-            $stmt->bind_param("iss", $sensor, $rango['inicio'], $rango['fin']);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $row = $result->fetch_assoc();
-            $response['datasets'][0]['data'][] = round($row['promedio'], 2);
-        }
-        $response['datasets'][0]['label'] = 'Caudal Promedio';
-        $response['datasets'][0]['backgroundColor'] = ['#4e73df', '#e74a3b'];
-        $response['titulo'] = "Comparación por temporadas - $anio";
-        break;
-}
 
 echo json_encode($response);
-?>
