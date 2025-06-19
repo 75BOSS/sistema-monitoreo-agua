@@ -69,7 +69,7 @@ $sensores = $conexion->query("SELECT id, nombre FROM sensores ORDER BY nombre AS
     </form>
 
     <div>
-        <canvas id="graficaCaudal" height="120"></canvas>
+        <canvas id="graficaCaudal" height="300" style="display:block;" height="120"></canvas>
     </div>
 </div>
 
@@ -137,9 +137,10 @@ document.getElementById('formComparar').addEventListener('submit', function (e) 
 
         const datasets = data.datasets.map(ds => ({ ...ds, borderWidth: 1 }));
 
-        const tipo = (tipoGrafica === 'comparacion_sensores') ? 'line' : 'bar';
-            window.miGrafico = new Chart(ctx, {
-            type: tipo,
+        
+const tipo = (tipoGrafica === 'comparacion_sensores') ? 'line' : 'bar';
+
+    window.miGrafico = new Chart(ctx, { type: tipo,
             data: {
                 labels: data.labels,
                 datasets: datasets
@@ -235,8 +236,10 @@ fetch('get_grafico.php', {
 
   const datasets = data.datasets.map(ds => ({ ...ds, borderWidth: 1 }));
 
-  window.miGrafico = new Chart(ctx, {
-    type: 'bar',
+  
+const tipo = (tipoGrafica === 'comparacion_sensores') ? 'line' : 'bar';
+
+    window.miGrafico = new Chart(ctx, { type: tipo,
     data: {
       labels: data.labels,
       datasets: datasets
