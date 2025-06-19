@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 session_start();
 include_once 'conexion.php';
 
@@ -16,12 +19,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($resultado->num_rows === 1) {
         $usuario = $resultado->fetch_assoc();
 
-        // Si estás usando contraseñas sin hash:
-        if ($contrasena === $usuario['contraseña']) {
+        // Verificar contraseña contra el campo 'contraseña'
+        if (password_verify($contrasena, $usuario['contraseña'])) {
             $_SESSION['id'] = $usuario['id'];
             $_SESSION['nombre'] = $usuario['nombre'];
             $_SESSION['rol'] = $usuario['rol'];
 
+            // Redirigir según rol
             switch ($usuario['rol']) {
                 case 'administrador': header('Location: admin/dashboard.php'); break;
                 case 'tecnico': header('Location: tecnico/dashboard.php'); break;
@@ -45,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            background: #f4f6fa;
+            background-color: #f8f9fa;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -53,37 +57,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         .login-box {
             background: #fff;
-            padding: 30px 40px;
+            padding: 2rem;
             border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            box-shadow: 0px 10px 20px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 420px;
+            max-width: 400px;
+        }
+        .btn-primary {
+            width: 100%;
         }
     </style>
 </head>
 <body>
 
 <div class="login-box">
-    <h2 class="text-center mb-4">Iniciar Sesión</h2>
-
+    <h3 class="text-center mb-4">Iniciar Sesión</h3>
     <?php if ($error): ?>
         <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
-
     <form method="POST">
         <div class="mb-3">
             <label for="correo" class="form-label">Correo electrónico</label>
-            <input type="email" name="correo" class="form-control" required>
+            <input type="email" name="correo" id="correo" class="form-control" required>
         </div>
         <div class="mb-3">
             <label for="contrasena" class="form-label">Contraseña</label>
-            <input type="password" name="contrasena" class="form-control" required>
+            <input type="password" name="contrasena" id="contrasena" class="form-control" required>
         </div>
-        <button type="submit" class="btn btn-primary w-100">Entrar</button>
-        <div class="mt-3 text-center">
-            ¿No tienes cuenta? <a href="registro.php">Regístrate</a>
-        </div>
+        <button type="submit" class="btn btn-primary">Entrar</button>
     </form>
+    <p class="text-center mt-3">¿No tienes cuenta? <a href="registro.php">Regístrate</a></p>
 </div>
 
 </body>
