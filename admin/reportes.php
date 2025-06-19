@@ -137,8 +137,9 @@ document.getElementById('formComparar').addEventListener('submit', function (e) 
 
         const datasets = data.datasets.map(ds => ({ ...ds, borderWidth: 1 }));
 
-        window.miGrafico = new Chart(ctx, {
-            type: 'bar',
+        const tipo = (tipoGrafica === 'comparacion_sensores') ? 'line' : 'bar';
+            window.miGrafico = new Chart(ctx, {
+            type: tipo,
             data: {
                 labels: data.labels,
                 datasets: datasets
