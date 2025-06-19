@@ -9,8 +9,9 @@ if (!isset($_SESSION['nombre']) || $_SESSION['rol'] !== 'administrador') {
     exit;
 }
 
-include_once '..conexion.php';
-include_once '../includes/header.php';
+include_once '../conexion.php';     // <- aquí el cambio real
+include_once '../includes/header.php'; // esta línea solo si el archivo realmente existe
+
 
 
 // Conteos rápidos
